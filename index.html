@@ -13,7 +13,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
 
 <style>
 /* ===== DESIGN TOKENS (ui-ux-pro-max: AI-Native UI + education teal/amber) ===== */
@@ -382,7 +381,8 @@ th{color:var(--fg-muted);font-weight:500;font-size:.78rem;text-transform:upperca
 footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem);text-align:center;color:var(--fg-muted);font-size:.9rem;position:relative;z-index:2}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:200;background:var(--panel-strong);border:1px solid var(--teal-400);padding:.9rem 1.4rem;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;font-size:.9rem;box-shadow:var(--shadow-glow)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.reveal{opacity:0;transform:translateY(24px)}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
 .video-frame{max-width:640px;margin:2.4rem auto 0;border-radius:16px;overflow:hidden;border:1px solid var(--glass-border);background:var(--panel-strong);box-shadow:0 34px 80px rgba(0,0,0,.5)}
 .vf-bar{display:flex;align-items:center;gap:.4rem;padding:.6rem .9rem;background:rgba(4,17,15,.7);border-bottom:1px solid var(--glass-border)}
 .vf-dot{width:11px;height:11px;border-radius:50%}.vf-dot.r{background:#ff5f57}.vf-dot.y{background:#febc2e}.vf-dot.g{background:#28c840}
@@ -1082,17 +1082,7 @@ if(window.gsap&&window.ScrollTrigger){
   }
 
   // generic 3D reveals (skip feature-grid cards — handled below)
-  gsap.utils.toArray('.reveal').forEach(function(el){
-    if(el.parentElement && el.parentElement.classList.contains('grid'))return;
-    if(SMALL){gsap.set(el,{opacity:1,y:0,rotateX:0});return;}
-    gsap.fromTo(el,{opacity:0,y:44,filter:'blur(6px)',rotateX:RM?0:-10,transformPerspective:820},{opacity:1,y:0,filter:'blur(0px)',rotateX:0,duration:.85,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none reverse'}});
-  });
-
-  // feature cards: staggered 3D fan-in
-  gsap.utils.toArray('#features .grid').forEach(function(g){
-    if(SMALL){gsap.set(g.children,{opacity:1,y:0,rotateY:0});return;}
-    gsap.from(g.children,{opacity:0,y:56,filter:'blur(5px)',rotateY:RM?0:16,transformPerspective:900,transformOrigin:'left center',duration:.85,stagger:.09,ease:'power3.out',scrollTrigger:{trigger:g,start:'top 82%'}});
-  });
+  // reveals are handled by a lightweight IntersectionObserver (bulletproof + fast)
 
   // hero parallax + Calpus spins as you scroll away
   gsap.to('#hero-copy',{y:-90,opacity:.1,ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:.6}});
@@ -1103,14 +1093,6 @@ if(window.gsap&&window.ScrollTrigger){
     gsap.fromTo(t,{y:30},{y:-30,ease:'none',scrollTrigger:{trigger:t,start:'top bottom',end:'bottom top',scrub:.4}});
   });
 
-  // PIN + scrub the Exam Radar: panel rotates up in 3D, prediction bars grow
-  var examP=document.querySelector('#exam .glass');
-  if(examP && SMALL){gsap.set(examP,{opacity:1,y:0,rotateX:0,scale:1});gsap.set(document.querySelectorAll('#exam .stat'),{opacity:1,scaleX:1});}
-  else if(examP){
-    gsap.timeline({scrollTrigger:{trigger:'#exam',start:'top 80%',toggleActions:'play none none reverse'}})
-      .from(examP,{rotateX:RM?0:20,scale:.96,opacity:0,y:28,transformPerspective:1000,duration:.7,ease:'power3.out'})
-      .from('#exam .stat',{scaleX:0,transformOrigin:'left center',opacity:0,stagger:.14,duration:.5,ease:'power2.out'},'-=0.3');
-  }
 
   if(!RM){
     document.querySelectorAll('.hero-cta .btn').forEach(magnetize);
@@ -1888,23 +1870,16 @@ function imgFail(el){el.style.display='none';var s=document.getElementById('cbot
 function calpusExp(name){document.querySelectorAll('.cbot').forEach(function(c){c.setAttribute('class','cbot exp-'+name);});}
 (function(){var seq=['happy','happy','think','happy','surprise','happy','wink','happy'],i=0;
   setInterval(function(){ if(document.hidden)return; i=(i+1)%seq.length; calpusExp(seq[i]); },3600);})();
-// Calpus looks toward the mouse
-(function calpusLook(){
-  var el=document.getElementById('calpus-hero');
-  if(!el || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-  var tx=0,ty=0,cx=0,cy=0;
-  addEventListener('mousemove',function(e){
-    var r=el.getBoundingClientRect();
-    tx=Math.max(-1,Math.min(1,(e.clientX-(r.left+r.width/2))/(innerWidth/2)));
-    ty=Math.max(-1,Math.min(1,(e.clientY-(r.top+r.height/2))/(innerHeight*0.6)));
-  });
-  (function loop(){ cx+=(tx-cx)*0.08; cy+=(ty-cy)*0.08;
-    el.style.setProperty('--lx',(cx*18)+'deg');
-    el.style.setProperty('--ly',(-cy*11)+'deg');
-    var eg=document.querySelector('#cbot-svg .eyes');
-    if(eg&&getComputedStyle(document.getElementById('cbot-svg')).display!=='none'){eg.setAttribute('transform','translate('+(cx*7).toFixed(1)+','+(cy*6).toFixed(1)+')');}
-    requestAnimationFrame(loop);
-  })();
+/* mouse-look removed */
+// bulletproof reveal-on-scroll (native IntersectionObserver, no per-frame cost)
+(function(){
+  var els=[].slice.call(document.querySelectorAll('.reveal'));
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in');});}
+  else{
+    var io=new IntersectionObserver(function(en){en.forEach(function(x){if(x.isIntersecting){x.target.classList.add('in');io.unobserve(x.target);}});},{rootMargin:'0px 0px -6% 0px',threshold:0.04});
+    els.forEach(function(e){io.observe(e);});
+    requestAnimationFrame(function(){els.forEach(function(e){if(e.getBoundingClientRect().top<innerHeight)e.classList.add('in');});});
+  }
 })();
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeOverlay(o.id)}));
 addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>closeOverlay(o.id))});
