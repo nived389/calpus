@@ -1,0 +1,10 @@
+# --- SECRETS: never commit ---
+**/.env
+**/API-KEYS.txt
+presentation-server/.env
+presentation-server/API-KEYS.txt
+
+# runtime / os
+**/node_modules/
+**/server.log
+.DS_Store

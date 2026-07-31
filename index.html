@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Calpus — AI Study Companion for Calicut University</title>
+<meta name="description" content="Calpus is an AI study agent for Calicut University students. It reads your notes and past papers, explains topics with marks-wise questions, builds editable presentations, predicts exam questions, and speaks 12+ languages." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+
+<style>
+/* ===== DESIGN TOKENS (ui-ux-pro-max: AI-Native UI + education teal/amber) ===== */
+:root{
+  --teal-500:#0D9488;--teal-400:#2DD4BF;--teal-300:#5EEAD4;
+  --amber-500:#D97706;--amber-400:#F59E0B;--pink:#FB7BA2;
+  --grade-green:#22C55E;--destructive:#F43F5E;
+  --bg-0:#04110F;--bg-1:#08201C;
+  --panel:rgba(13,148,136,.06);--panel-strong:rgba(6,32,28,.72);
+  --glass-border:rgba(94,234,212,.16);
+  --fg:#EAFBF7;--fg-muted:#8FB8B0;
+  --radius:18px;--radius-sm:12px;--shadow-glow:0 0 40px rgba(45,212,191,.18);
+  --maxw:1160px;--ease:cubic-bezier(.22,.61,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg-0);color:var(--fg);overflow-x:hidden;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,.brand,.btn{font-family:'Space Grotesk',sans-serif;letter-spacing:-.02em}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+:focus-visible{outline:2px solid var(--teal-300);outline-offset:3px;border-radius:6px}
+img{max-width:100%}
+
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+.noise{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.04;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* scroll progress bar */
+#progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--teal-300),var(--amber-400));box-shadow:0 0 12px var(--teal-400)}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;gap:.55rem;justify-content:center;padding:.85rem 1.5rem;border-radius:999px;font-weight:600;font-size:.95rem;transition:transform .18s var(--ease),box-shadow .18s var(--ease),background .18s;min-height:46px}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--teal-400),var(--teal-500));color:#03110E;box-shadow:var(--shadow-glow)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 34px rgba(45,212,191,.35)}
+.btn-accent{background:linear-gradient(135deg,var(--amber-400),var(--amber-500));color:#1a0e00;box-shadow:0 0 30px rgba(245,158,11,.25)}
+.btn-accent:hover{transform:translateY(-2px)}
+.btn-ghost{background:var(--panel);border:1px solid var(--glass-border);color:var(--fg)}
+.btn-ghost:hover{background:rgba(45,212,191,.1)}
+.btn-sm{padding:.5rem 1rem;font-size:.85rem;min-height:38px}
+.chip{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:999px;background:var(--panel);border:1px solid var(--glass-border);font-size:.8rem;color:var(--teal-300);font-weight:500}
+.glass{background:var(--panel-strong);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glass-border);border-radius:var(--radius)}
+
+/* ===== NAV ===== */
+header.nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:1rem clamp(1rem,4vw,2.5rem);transition:background .3s,backdrop-filter .3s}
+header.nav.scrolled{background:rgba(4,17,15,.7);backdrop-filter:blur(14px);border-bottom:1px solid var(--glass-border)}
+.brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.25rem}
+.brand .mark{width:34px;height:34px;border-radius:10px;background:radial-gradient(circle at 30% 30%,var(--teal-300),var(--teal-500) 70%);box-shadow:var(--shadow-glow);display:grid;place-items:center;color:#03110E;font-weight:700}
+.nav-links{display:flex;align-items:center;gap:1.6rem;font-size:.92rem;color:var(--fg-muted)}
+.nav-links a{transition:color .2s}.nav-links a:hover{color:var(--fg)}
+.nav-actions{display:flex;align-items:center;gap:.7rem}
+@media(max-width:880px){.nav-links{display:none}}
+
+/* ===== SECTIONS ===== */
+main{position:relative;z-index:2}
+section{padding:clamp(2.5rem,7vh,5rem) clamp(1rem,5vw,2rem);max-width:var(--maxw);margin:0 auto}
+.eyebrow{color:var(--teal-300);font-weight:600;font-size:.85rem;text-transform:uppercase;letter-spacing:.14em;margin-bottom:1rem}
+h2.section-title{font-size:clamp(1.9rem,4.5vw,3rem);line-height:1.08;margin-bottom:1rem;font-weight:700}
+.section-sub{color:var(--fg-muted);max-width:56ch;font-size:1.08rem}
+
+.hero{min-height:100vh;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:2rem;max-width:var(--maxw);margin:0 auto;padding:6rem clamp(1rem,5vw,2rem) 2rem}
+.hero h1{font-size:clamp(2.6rem,6.5vw,4.6rem);line-height:1.02;font-weight:700}
+.hero h1 .grad{background:linear-gradient(120deg,var(--teal-300),var(--amber-400));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{margin:1.4rem 0 2rem;font-size:1.15rem;color:var(--fg-muted);max-width:48ch}
+.hero-cta{display:flex;gap:.9rem;flex-wrap:wrap}
+.hero-stats{display:flex;gap:2rem;margin-top:2.6rem;flex-wrap:wrap}
+.hero-stats b{display:block;font-family:'Space Grotesk';font-size:1.7rem;color:var(--fg)}
+.hero-stats span{font-size:.82rem;color:var(--fg-muted)}
+@media(max-width:900px){.hero{grid-template-columns:1fr;text-align:center;min-height:auto}.hero p.lead{margin-left:auto;margin-right:auto}.hero-cta,.hero-stats{justify-content:center}.hero-visual{order:-1}}
+@media(min-width:641px){.sm-only{display:none}}
+@media(max-width:640px){.reveal{opacity:1!important;transform:none!important}
+  .lg-only{display:none}
+  header.nav{padding:.65rem .9rem}
+  .brand{font-size:1.1rem;gap:.45rem}.brand .mark{width:30px;height:30px;font-size:.95rem}
+  .nav-actions{gap:.45rem}
+  .nav-actions .btn{padding:.5rem .85rem;font-size:.82rem;min-height:40px;white-space:nowrap}
+  .hero{padding-top:4.5rem;gap:.6rem}
+  .hero h1{font-size:2.3rem}
+  .stage{min-height:280px}
+  .calpus{width:170px;height:170px}
+  .hero p.lead{font-size:1rem;margin-top:1rem}
+  .hero-stats{gap:1.2rem;margin-top:1.6rem}
+  section{padding-top:2.2rem;padding-bottom:2.2rem}
+}
+
+/* ================= CALPUS CHARACTER (cute + roll) ================= */
+.stage{position:relative;display:grid;place-items:center;min-height:420px}
+.calpus{position:relative;width:250px;height:250px;animation:bob 5s ease-in-out infinite}
+.calpus .ring{position:absolute;inset:0;border-radius:50%;border:1.5px solid var(--teal-400);opacity:.32}
+.calpus .ring.r1{animation:spin 12s linear infinite}
+.calpus .ring.r2{inset:-26px;border-color:var(--amber-400);opacity:.22;animation:spin 18s linear infinite}
+.calpus .ring.r3{inset:-52px;border-style:dashed;opacity:.14;animation:spin 30s linear infinite reverse}
+.calpus.robot-x .core{display:none}
+.calpus .core{position:absolute;inset:44px;border-radius:46% 46% 48% 48%;
+  background:radial-gradient(circle at 34% 28%,#7ff2e2,var(--teal-400) 48%,var(--teal-500) 78%,#064e46 100%);
+  box-shadow:0 0 60px rgba(45,212,191,.55),inset -8px -10px 20px rgba(4,60,54,.5),inset 6px 8px 20px rgba(255,255,255,.35);
+  display:grid;place-items:center;animation:coreLife 7s ease-in-out infinite}
+/* graduation cap */
+.calpus .cap{position:absolute;top:-6px;left:50%;transform:translateX(-50%);z-index:3}
+.calpus .cap .board{width:64px;height:16px;background:#0b2a26;border:1px solid #12463f;transform:skewX(-1deg) rotate(-6deg);border-radius:3px;box-shadow:0 3px 6px rgba(0,0,0,.4)}
+.calpus .cap .btn-top{width:8px;height:8px;border-radius:50%;background:var(--amber-400);margin:-4px auto 0;position:relative;z-index:2}
+.calpus .cap .tassel{position:absolute;top:2px;right:6px;width:2px;height:22px;background:var(--amber-400);transform:rotate(10deg);animation:tassel 3s ease-in-out infinite;transform-origin:top}
+.calpus .cap .tassel::after{content:"";position:absolute;bottom:-4px;left:-2px;width:6px;height:6px;border-radius:50%;background:var(--amber-400)}
+/* face */
+.calpus .face{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:6px}
+.calpus .eyes{display:flex;gap:24px}
+.calpus .eye{width:22px;height:26px;background:#03231f;border-radius:50%;position:relative;animation:blink 4.5s infinite}
+.calpus .eye::after{content:"";position:absolute;width:9px;height:9px;background:#fff;border-radius:50%;top:4px;left:4px}
+.calpus .eye::before{content:"";position:absolute;width:4px;height:4px;background:#fff;border-radius:50%;bottom:5px;right:5px;opacity:.7}
+.calpus .cheeks{position:absolute;top:52%;width:100%;display:flex;justify-content:space-between;padding:0 14px}
+.calpus .cheek{width:16px;height:11px;border-radius:50%;background:var(--pink);opacity:.55;filter:blur(1px)}
+.calpus .mouth{width:26px;height:13px;border-radius:0 0 24px 24px;background:#03231f;transition:height .15s}
+.calpus.speaking .core{animation:coreLife 2.4s ease-in-out infinite}
+.calpus.speaking .mouth{animation:talk .26s ease-in-out infinite}
+/* orbiting sparks */
+.calpus .spark{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--amber-400);box-shadow:0 0 12px var(--amber-400);top:50%;left:50%}
+.orbit{position:absolute;inset:0;animation:spin 9s linear infinite}
+.orbit.b{animation-duration:14s;animation-direction:reverse}
+.orbit .spark{transform:translate(135px,0)}
+.orbit.b .spark{transform:translate(-118px,0);background:var(--teal-300);box-shadow:0 0 12px var(--teal-300)}
+/* mini mascot for chat */
+.calpus.mini{width:44px;height:44px;animation:bob 4s ease-in-out infinite}
+.calpus.mini .core{inset:6px}.calpus.mini .cap{top:-3px;transform:translateX(-50%) scale(.5)}
+.calpus.mini .eye{width:8px;height:9px}.calpus.mini .eye::after{width:3px;height:3px;top:1px;left:1px}
+.calpus.mini .eye::before{display:none}.calpus.mini .eyes{gap:8px}.calpus.mini .cheeks{display:none}
+.calpus.mini .mouth{width:9px;height:5px}.calpus.mini .ring,.calpus.mini .orbit{display:none}
+
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
+/* ===== new Calpus robot (live, with expressions) ===== */
+.calpus .cbot{position:absolute;left:50%;top:50%;width:122%;height:122%;overflow:visible;z-index:3}
+.calpus .cbot,.calpus .cbot-img,.calpus .cbot-vid{transform:translate(-50%,-50%) perspective(680px) rotateY(var(--lx,0deg)) rotateX(var(--ly,0deg))}
+.calpus .cbot-vid{position:absolute;left:50%;top:50%;width:122%;height:122%;object-fit:contain;z-index:3;border-radius:16px}
+.calpus .cbot-img{position:absolute;left:50%;top:50%;width:120%;height:120%;object-fit:contain;z-index:3;animation:cbGlow 4s ease-in-out infinite}
+@keyframes cbGlow{0%,100%{filter:drop-shadow(0 6px 26px rgba(45,212,191,.28))}50%{filter:drop-shadow(0 6px 40px rgba(45,212,191,.5))}}
+.cbot *{will-change:transform}
+.cbot .head{transform-box:fill-box;transform-origin:center;animation:cbHead 5s ease-in-out infinite}
+@keyframes cbHead{0%,100%{transform:rotate(-2.5deg)}50%{transform:rotate(2.5deg)}}
+.cbot .eyes{transform-box:fill-box;transform-origin:center;animation:cbBlink 4.4s infinite}
+@keyframes cbBlink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.cbot .eye{transform-box:fill-box;transform-origin:center;transition:transform .3s ease}
+.cbot .arm{transform-box:fill-box;transform-origin:center}
+.cbot .arm.l{animation:cbArmL 4s ease-in-out infinite}.cbot .arm.r{animation:cbArmR 4s ease-in-out infinite}
+@keyframes cbArmL{0%,100%{transform:rotate(4deg)}50%{transform:rotate(-5deg)}}
+@keyframes cbArmR{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
+.cbot .tassel,.cbot .cap circle:last-of-type{transform-box:fill-box;transform-origin:top;animation:cbTassel 3s ease-in-out infinite}
+@keyframes cbTassel{0%,100%{transform:rotate(4deg)}50%{transform:rotate(-6deg)}}
+.cbot .cape{transform-box:fill-box;transform-origin:top center;animation:cbCape 4.5s ease-in-out infinite}
+@keyframes cbCape{0%,100%{transform:skewX(-2deg)}50%{transform:skewX(3deg)}}
+.cbot .eyes{filter:drop-shadow(0 0 3px rgba(255,233,168,.9))}
+.cbot .mouth-o{display:none}
+.cbot .think-q{display:none}
+/* expressions */
+.cbot.exp-surprise .eye{transform:scale(1.35)}
+.cbot.exp-surprise .mouth-smile{display:none}.cbot.exp-surprise .mouth-o{display:block}
+.cbot.exp-think .eye.r{transform:scaleY(.35)}
+.cbot.exp-think .think-q{display:block;animation:cbQ 1.2s ease-in-out infinite}
+@keyframes cbQ{0%,100%{opacity:.5;transform:translateY(0)}50%{opacity:1;transform:translateY(-4px)}}
+.cbot.exp-wink .eye.r{transform:scaleY(.1)}
+/* talking */
+.calpus.speaking .cbot .mouth-smile{transform-box:fill-box;transform-origin:center;animation:cbTalk .26s ease-in-out infinite}
+@keyframes cbTalk{0%,100%{transform:scaleY(1)}50%{transform:scaleY(2.4)}}
+@media(prefers-reduced-motion:reduce){.cbot .head,.cbot .eyes,.cbot .arm,.cbot .tassel,.cbot .cape{animation:none!important}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.12)}}
+@keyframes talk{0%,100%{height:6px}50%{height:16px}}
+@keyframes tassel{0%,100%{transform:rotate(10deg)}50%{transform:rotate(-8deg)}}
+/* breathing + periodic playful roll in one transform track */
+@keyframes coreLife{
+  0%{transform:scale(1) rotate(0)}
+  45%{transform:scale(1.05) rotate(0)}
+  62%{transform:scale(1) rotate(0)}
+  78%{transform:scale(1.04) rotate(360deg)}
+  100%{transform:scale(1) rotate(360deg)}
+}
+
+/* ===== FEATURE GRID / STEPS ===== */
+.grid{display:grid;gap:1.2rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:3rem}
+.card{padding:1.6rem;border-radius:var(--radius);background:var(--panel-strong);border:1px solid var(--glass-border);transition:transform .25s var(--ease),border-color .25s}
+.card:hover{transform:translateY(-6px);border-color:var(--teal-400)}
+.card .ic{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;margin-bottom:1rem;background:rgba(45,212,191,.12);color:var(--teal-300)}
+.card h3{font-size:1.15rem;margin-bottom:.5rem;font-weight:600}
+.card p{color:var(--fg-muted);font-size:.95rem}
+svg.i{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.steps{display:grid;gap:1.2rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:3rem;counter-reset:s}
+.step{padding:1.5rem;border-radius:var(--radius);border:1px dashed var(--glass-border);position:relative}
+.step::before{counter-increment:s;content:"0" counter(s);font-family:'Space Grotesk';font-size:2.2rem;color:var(--teal-400);opacity:.5;font-weight:700}
+.step h3{margin:.4rem 0 .4rem;font-size:1.1rem}.step p{color:var(--fg-muted);font-size:.92rem}
+
+/* ===== PRICING ===== */
+.price-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.4rem;margin-top:3rem;align-items:stretch}
+.plan{padding:2rem;border-radius:var(--radius);background:var(--panel-strong);border:1px solid var(--glass-border);display:flex;flex-direction:column}
+.plan.featured{border-color:var(--amber-400);box-shadow:0 0 40px rgba(245,158,11,.12);position:relative}
+.plan.featured::after{content:"After trial";position:absolute;top:-12px;right:20px;background:var(--amber-400);color:#1a0e00;font-size:.72rem;font-weight:700;padding:.25rem .7rem;border-radius:999px}
+.plan .amt{font-family:'Space Grotesk';font-size:2.8rem;font-weight:700;margin:.6rem 0}
+.plan .amt small{font-size:1rem;color:var(--fg-muted);font-weight:400}
+.plan ul{list-style:none;margin:1.2rem 0;display:grid;gap:.7rem}
+.plan li{display:flex;gap:.6rem;font-size:.94rem;color:var(--fg-muted)}
+.plan li svg{color:var(--grade-green);flex-shrink:0}
+.plan .btn{margin-top:auto;width:100%}
+
+/* ===== OVERLAY / MODALS ===== */
+.overlay{position:fixed;inset:0;z-index:100;background:rgba(2,10,9,.82);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{width:100%;max-width:460px;padding:2rem;max-height:92vh;overflow:auto}
+.modal.wide{max-width:1080px;padding:0}
+.modal h2{font-size:1.6rem;margin-bottom:.3rem}
+.modal .sub{color:var(--fg-muted);margin-bottom:1.5rem;font-size:.95rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:.82rem;color:var(--fg-muted);margin-bottom:.4rem;font-weight:500}
+.field input,.field select,.field textarea{width:100%;padding:.8rem 1rem;border-radius:var(--radius-sm);background:rgba(4,17,15,.6);border:1px solid var(--glass-border);color:var(--fg);font-size:.95rem;font-family:inherit}
+.field input:focus,.field select:focus{border-color:var(--teal-400);outline:none}
+.field input[readonly]{opacity:.6;cursor:not-allowed;background:rgba(4,17,15,.35)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}
+.modal .x{position:absolute;top:14px;right:16px;font-size:1.4rem;color:var(--fg-muted);z-index:5}
+.modal-pos{position:relative}
+.switch-line{text-align:center;margin-top:1.2rem;font-size:.9rem;color:var(--fg-muted)}
+.switch-line b{color:var(--teal-300);cursor:pointer}
+
+/* ===== CHAT APP ===== */
+.app-shell{display:grid;grid-template-columns:230px 1fr;height:88vh}
+.app-side{background:var(--bg-1);border-right:1px solid var(--glass-border);padding:1.3rem;display:flex;flex-direction:column;gap:.4rem;border-radius:var(--radius) 0 0 var(--radius)}
+.app-side .u{display:flex;gap:.6rem;align-items:center;padding-bottom:1rem;margin-bottom:.6rem;border-bottom:1px solid var(--glass-border)}
+.app-side .u .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--teal-400),var(--amber-400));display:grid;place-items:center;font-weight:700;color:#03110E}
+.side-btn{display:flex;gap:.6rem;align-items:center;padding:.6rem .7rem;border-radius:10px;font-size:.9rem;color:var(--fg-muted);text-align:left;width:100%}
+.side-btn:hover,.side-btn.active{background:rgba(45,212,191,.1);color:var(--fg)}
+.side-foot{margin-top:auto;font-size:.78rem;color:var(--fg-muted)}
+.app-main{display:flex;flex-direction:column;background:var(--bg-0);border-radius:0 var(--radius) var(--radius) 0;position:relative;overflow:hidden}
+.app-main::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(420px 300px at 18% 8%,rgba(45,212,191,.12),transparent 62%),radial-gradient(380px 300px at 88% 92%,rgba(245,158,11,.09),transparent 62%);animation:aurora 16s ease-in-out infinite}
+@keyframes aurora{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-22px,16px) scale(1.12)}}
+.app-top,.chat,.suggest,.composer,#calpus-slides,#notif-banner{position:relative;z-index:1}
+.chat .msg{animation:msgIn .4s var(--ease)}
+@keyframes msgIn{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+#calpus-slides{margin:.5rem 1.4rem 0;height:54px;border-radius:12px;border:1px solid var(--glass-border);background:linear-gradient(120deg,rgba(45,212,191,.08),rgba(245,158,11,.05));overflow:hidden;position:relative}
+.cs-track{position:relative;height:100%}
+.cs-slide{position:absolute;inset:0;display:flex;align-items:center;gap:.7rem;padding:0 1rem;opacity:0;transform:translateX(22px);transition:opacity .55s var(--ease),transform .55s var(--ease)}
+.cs-slide.on{opacity:1;transform:translateX(0)}
+.cs-slide .ic{width:30px;height:30px;border-radius:9px;background:rgba(45,212,191,.16);display:grid;place-items:center;font-size:1rem;flex-shrink:0;box-shadow:0 0 14px rgba(45,212,191,.2)}
+.cs-slide b{font-size:.9rem;font-family:'Space Grotesk'}.cs-slide small{font-size:.76rem;color:var(--fg-muted)}
+.cs-dots{position:absolute;bottom:6px;right:12px;display:flex;gap:4px}
+.cs-dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.22);transition:.3s}
+.cs-dots i.on{background:var(--teal-300);width:14px;border-radius:3px}
+.app-top{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.3rem;border-bottom:1px solid var(--glass-border)}
+.app-top .who{display:flex;align-items:center;gap:.7rem}
+.app-top .status{font-size:.85rem;color:var(--fg-muted)}
+.app-top .status b{color:var(--fg);font-weight:600;display:block;font-size:.92rem}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--grade-green);box-shadow:0 0 8px var(--grade-green);display:inline-block;margin-right:.35rem}
+.lang-sel select{padding:.45rem .6rem;border-radius:8px;background:rgba(4,17,15,.6);border:1px solid var(--glass-border);color:var(--fg);font-size:.82rem}
+.chat{flex:1;overflow-y:auto;padding:1.4rem;display:flex;flex-direction:column;gap:1rem}
+.msg{max-width:80%;padding:.85rem 1.1rem;border-radius:16px;font-size:.95rem;line-height:1.55;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--teal-500),var(--teal-400));color:#03110E;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:var(--panel-strong);border:1px solid var(--glass-border);border-bottom-left-radius:4px}
+.msg.bot .src{margin-top:.7rem;padding-top:.6rem;border-top:1px dashed var(--glass-border);font-size:.78rem;color:var(--teal-300)}
+.msg .mini-av{font-size:.72rem;color:var(--teal-300);font-weight:600;margin-bottom:.35rem;display:flex;align-items:center;gap:.4rem}
+.msg .row-act{margin-top:.7rem;display:flex;gap:.5rem;flex-wrap:wrap}
+.typing{display:flex;gap:.3rem;padding:1rem}
+.typing span{width:8px;height:8px;border-radius:50%;background:var(--teal-300);animation:td 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes td{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-5px)}}
+.suggest{display:flex;gap:.5rem;flex-wrap:wrap;padding:0 1.4rem .8rem}
+.suggest button{font-size:.82rem;padding:.5rem .9rem;border-radius:999px;background:var(--panel);border:1px solid var(--glass-border);color:var(--teal-300)}
+.suggest button:hover{background:rgba(45,212,191,.12)}
+.composer{display:flex;gap:.6rem;align-items:flex-end;padding:1rem 1.3rem;border-top:1px solid var(--glass-border)}
+.composer textarea{flex:1;resize:none;max-height:120px;padding:.8rem 1rem;border-radius:14px;background:rgba(4,17,15,.6);border:1px solid var(--glass-border);color:var(--fg);font-family:inherit;font-size:.95rem}
+#ac-box{position:absolute;left:1.3rem;right:1.3rem;bottom:80px;z-index:6;display:none;flex-direction:column;background:var(--panel-strong);border:1px solid var(--glass-border);border-radius:12px;overflow:hidden;box-shadow:0 -10px 34px rgba(0,0,0,.45);backdrop-filter:blur(14px)}
+#ac-box.show{display:flex}
+.ac-item{padding:.6rem .9rem;font-size:.88rem;color:var(--fg);cursor:pointer;display:flex;align-items:center;gap:.55rem;border-bottom:1px solid var(--glass-border)}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover{background:rgba(45,212,191,.14)}
+.ac-item .k{color:var(--teal-300);flex-shrink:0;font-size:.9rem}
+.mic{width:46px;height:46px;border-radius:50%;background:var(--panel);border:1px solid var(--glass-border);display:grid;place-items:center;flex-shrink:0;color:var(--teal-300);transition:.2s}
+.mic.rec{background:var(--destructive);color:#fff;animation:micpulse 1.1s infinite}
+@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,.5)}50%{box-shadow:0 0 0 12px rgba(244,63,94,0)}}
+.send{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,var(--teal-400),var(--teal-500));display:grid;place-items:center;flex-shrink:0;color:#03110E}
+@media(max-width:760px){.app-shell{grid-template-columns:1fr}.app-side{display:none}}
+
+/* ===== PRESENTATION BUILDER ===== */
+.ppt-head{padding:1.4rem 1.8rem;border-bottom:1px solid var(--glass-border)}
+.ppt-body{display:grid;grid-template-columns:260px 1fr;height:78vh}
+.ppt-ctrl{padding:1.4rem;border-right:1px solid var(--glass-border);background:var(--bg-1);overflow:auto;border-radius:0 0 0 var(--radius)}
+.engine{display:flex;gap:.5rem;margin:.6rem 0 1.2rem;flex-wrap:wrap}
+.engine button{flex:1;min-width:80px;padding:.6rem;border-radius:10px;border:1px solid var(--glass-border);background:var(--panel);font-size:.82rem;font-weight:600;color:var(--fg-muted)}
+.engine button.sel{border-color:var(--teal-400);background:rgba(45,212,191,.14);color:var(--fg)}
+.ppt-slides{padding:1.6rem;overflow:auto;display:grid;gap:1.2rem;background:var(--bg-0);border-radius:0 0 var(--radius) 0}
+.slide{background:linear-gradient(135deg,#062a25,#04160f);border:1px solid var(--glass-border);border-radius:14px;padding:1.6rem 1.8rem;position:relative;box-shadow:0 6px 24px rgba(0,0,0,.3)}
+.slide .no{position:absolute;top:12px;right:16px;font-size:.75rem;color:var(--fg-muted)}
+.slide-row{display:flex;gap:1rem;align-items:flex-start;margin-top:.2rem}
+.slide-txt{flex:1;min-width:0}
+.slide-img{width:150px;flex-shrink:0;background:rgba(45,212,191,.06);border:1px solid var(--glass-border);border-radius:10px;padding:.5rem;display:grid;place-items:center}
+.slide-img svg{width:100%;height:auto;max-height:112px}
+/* slides feel 3D on hover */
+.slide{transition:transform .28s var(--ease),box-shadow .28s,border-color .28s}
+.slide:hover{transform:perspective(800px) rotateX(2.5deg) translateY(-4px);box-shadow:0 16px 38px rgba(0,0,0,.4);border-color:var(--teal-400)}
+/* ===== Calpus WORKER (full body: hands + legs, building live) ===== */
+.cw-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;min-height:58vh;text-align:center}
+.cw-txt{font-family:'Space Grotesk';color:var(--teal-300);font-size:1.1rem}
+.cw-txt span{display:block;color:var(--fg-muted);font-size:.85rem;margin-top:.25rem}
+.cw-dots{display:inline-flex;gap:.3rem;margin-left:.3rem}
+.cw-dots i{width:6px;height:6px;border-radius:50%;background:var(--teal-300);display:inline-block;animation:td 1.2s infinite}
+.cw-dots i:nth-child(2){animation-delay:.2s}.cw-dots i:nth-child(3){animation-delay:.4s}
+.cw{position:relative;width:200px;height:238px;animation:cwFloat 3.2s ease-in-out infinite;filter:drop-shadow(0 22px 30px rgba(45,212,191,.28))}
+@keyframes cwFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}
+.cw-body{position:absolute;left:50%;top:22px;transform:translateX(-50%);width:110px;height:110px}
+.cw-core{position:absolute;inset:0;border-radius:46% 46% 48% 48%;background:radial-gradient(circle at 34% 28%,#7ff2e2,var(--teal-400) 48%,var(--teal-500) 78%,#064e46 100%);box-shadow:0 0 45px rgba(45,212,191,.55),inset -6px -8px 16px rgba(4,60,54,.5),inset 5px 6px 16px rgba(255,255,255,.35);z-index:2}
+.cw-cap{position:absolute;top:-9px;left:50%;transform:translateX(-50%);z-index:4}
+.cw-board{display:block;width:50px;height:12px;background:#0b2a26;border:1px solid #12463f;transform:rotate(-6deg);border-radius:3px}
+.cw-tassel{position:absolute;top:0;right:4px;width:2px;height:15px;background:var(--amber-400);transform-origin:top;animation:tassel 2.2s ease-in-out infinite}
+.cw-tassel::after{content:"";position:absolute;bottom:-3px;left:-2px;width:5px;height:5px;border-radius:50%;background:var(--amber-400)}
+.cw-face{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;z-index:3}
+.cw-eyes{display:flex;gap:16px}
+.cw-eye{width:14px;height:18px;background:#03231f;border-radius:50%;position:relative;animation:blink 4s infinite}
+.cw-eye::after{content:"";position:absolute;width:6px;height:6px;background:#fff;border-radius:50%;top:3px;left:3px}
+.cw-cheeks{position:absolute;top:54%;width:100%;display:flex;justify-content:space-between;padding:0 12px}
+.cw-cheeks span{width:13px;height:9px;border-radius:50%;background:var(--pink);opacity:.55;filter:blur(1px)}
+.cw-mouth{width:16px;height:8px;border-radius:0 0 16px 16px;background:#03231f;animation:cwTalk .5s ease-in-out infinite}
+@keyframes cwTalk{0%,100%{height:6px}50%{height:12px}}
+.cw-arm{position:absolute;top:48px;width:42px;height:11px;border-radius:8px;background:linear-gradient(90deg,var(--teal-400),var(--teal-500));z-index:1}
+.cw-arm.l{left:-28px;transform-origin:38px 50%;animation:armL .55s ease-in-out infinite}
+.cw-arm.r{right:-28px;transform-origin:4px 50%;animation:armR .55s ease-in-out infinite}
+.cw-hand{position:absolute;top:-4px;width:17px;height:17px;border-radius:50%;background:var(--teal-300);box-shadow:0 0 10px rgba(94,234,212,.7)}
+.cw-arm.l .cw-hand{left:-8px}.cw-arm.r .cw-hand{right:-8px}
+@keyframes armL{0%,100%{transform:rotate(20deg)}50%{transform:rotate(54deg)}}
+@keyframes armR{0%,100%{transform:rotate(-20deg)}50%{transform:rotate(-54deg)}}
+.cw-leg{position:absolute;bottom:-30px;width:11px;height:30px;border-radius:8px;background:linear-gradient(180deg,var(--teal-500),#064e46);transform-origin:top}
+.cw-leg.l{left:38px;animation:legL .9s ease-in-out infinite}
+.cw-leg.r{right:38px;animation:legR .9s ease-in-out infinite}
+.cw-leg::after{content:"";position:absolute;bottom:-4px;left:-3px;width:19px;height:8px;border-radius:6px;background:var(--amber-400)}
+@keyframes legL{0%,100%{transform:rotate(10deg)}50%{transform:rotate(-16deg)}}
+@keyframes legR{0%,100%{transform:rotate(-10deg)}50%{transform:rotate(16deg)}}
+.cw-stage{position:absolute;bottom:0;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:flex-end;z-index:0}
+.cw-card{width:26px;height:34px;border-radius:4px;background:rgba(45,212,191,.16);border:1px solid var(--teal-400);box-shadow:0 0 10px rgba(45,212,191,.25);opacity:0;transform:translateY(12px) scale(.9);animation:cardPop 1.6s ease-in-out infinite}
+.cw-card:nth-child(2){animation-delay:.45s}.cw-card:nth-child(3){animation-delay:.9s}
+@keyframes cardPop{0%,78%,100%{opacity:0;transform:translateY(12px) scale(.9)}18%,58%{opacity:1;transform:translateY(0) scale(1)}}
+/* chat typing: a little Calpus that nods while thinking */
+.calpus.mini.think{animation:cwThink 1s ease-in-out infinite}
+@keyframes cwThink{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-4px) rotate(4deg)}}
+@media(max-width:640px){.slide-row{flex-direction:column}.slide-img{width:100%}}
+.slide h4{font-family:'Space Grotesk';font-size:1.35rem;margin-bottom:.8rem;color:var(--teal-300);outline:none}
+.slide ul{margin-left:1.1rem;display:grid;gap:.45rem}
+.slide li{font-size:.95rem;outline:none}
+.slide [contenteditable]:focus{background:rgba(45,212,191,.08);border-radius:4px}
+.slide .del{position:absolute;bottom:10px;right:14px;font-size:.75rem;color:var(--destructive);cursor:pointer}
+[contenteditable]{cursor:text}
+
+/* ===== ADMIN ===== */
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin:1.4rem 2rem}
+.stat{padding:1.2rem;border-radius:var(--radius);background:var(--panel-strong);border:1px solid var(--glass-border)}
+.stat b{font-family:'Space Grotesk';font-size:1.9rem;display:block}.stat span{font-size:.82rem;color:var(--fg-muted)}
+.stat.up b{color:var(--grade-green)}
+.admin-body{padding:0 2rem 2rem;display:grid;grid-template-columns:1.3fr 1fr;gap:1.4rem}
+.panel-box{padding:1.4rem;border-radius:var(--radius);background:var(--panel-strong);border:1px solid var(--glass-border)}
+.panel-box h3{font-size:1.05rem;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;justify-content:space-between}
+.upload{border:2px dashed var(--glass-border);border-radius:var(--radius);padding:2rem;text-align:center;color:var(--fg-muted);transition:.2s;cursor:pointer}
+.upload:hover{border-color:var(--teal-400);background:rgba(45,212,191,.05)}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{text-align:left;padding:.6rem .4rem;border-bottom:1px solid var(--glass-border)}
+th{color:var(--fg-muted);font-weight:500;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em}
+.badge{font-size:.72rem;padding:.2rem .55rem;border-radius:999px;font-weight:600}
+.badge.paid{background:rgba(34,197,94,.15);color:var(--grade-green)}
+.badge.free{background:rgba(245,158,11,.15);color:var(--amber-400)}
+.badge.trial{background:rgba(45,212,191,.15);color:var(--teal-300)}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-bottom:1px solid var(--glass-border);font-size:.9rem}
+.tg{width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.12);position:relative;transition:.2s;flex-shrink:0;cursor:pointer}
+.tg::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
+.tg.on{background:var(--teal-500)}.tg.on::after{left:21px}
+@media(max-width:820px){.admin-body{grid-template-columns:1fr}.ppt-body{grid-template-columns:1fr}}
+
+footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem);text-align:center;color:var(--fg-muted);font-size:.9rem;position:relative;z-index:2}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);z-index:200;background:var(--panel-strong);border:1px solid var(--teal-400);padding:.9rem 1.4rem;border-radius:12px;opacity:0;pointer-events:none;transition:.3s;font-size:.9rem;box-shadow:var(--shadow-glow)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.reveal{opacity:0;transform:translateY(24px)}
+.video-frame{max-width:640px;margin:2.4rem auto 0;border-radius:16px;overflow:hidden;border:1px solid var(--glass-border);background:var(--panel-strong);box-shadow:0 34px 80px rgba(0,0,0,.5)}
+.vf-bar{display:flex;align-items:center;gap:.4rem;padding:.6rem .9rem;background:rgba(4,17,15,.7);border-bottom:1px solid var(--glass-border)}
+.vf-dot{width:11px;height:11px;border-radius:50%}.vf-dot.r{background:#ff5f57}.vf-dot.y{background:#febc2e}.vf-dot.g{background:#28c840}
+.vf-url{margin-left:.6rem;font-size:.78rem;color:var(--fg-muted)}
+.vf-screen{position:relative;min-height:300px;padding:1.3rem;display:flex;flex-direction:column;gap:.7rem;justify-content:center;background:radial-gradient(520px 320px at 30% 0,rgba(45,212,191,.09),transparent)}
+.vf-input{display:flex;align-items:center;font-size:1.05rem;color:var(--fg);border:1px solid var(--glass-border);border-radius:12px;padding:.85rem 1rem;background:rgba(4,17,15,.6)}
+.vf-caret{width:2px;height:20px;background:var(--teal-300);margin-left:3px;animation:vfCaret 1s step-end infinite}
+@keyframes vfCaret{0%,100%{opacity:1}50%{opacity:0}}
+.vf-msg{max-width:88%;padding:.7rem 1rem;border-radius:14px;font-size:.92rem;line-height:1.5;animation:msgIn .4s var(--ease)}
+.vf-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--teal-500),var(--teal-400));color:#03110E}
+.vf-msg.bot{align-self:flex-start;background:rgba(6,32,28,.85);border:1px solid var(--glass-border)}
+.vf-msg.bot b{color:var(--teal-300);font-size:.72rem;letter-spacing:.04em}
+.vf-typing{align-self:flex-start;display:flex;align-items:center;gap:.5rem}
+.vf-chip{align-self:flex-start;font-size:.82rem;color:var(--grade-green);background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);padding:.4rem .85rem;border-radius:999px;animation:msgIn .4s var(--ease)}
+.vf-build{display:flex;flex-direction:column;align-items:center;gap:.4rem;text-align:center;animation:msgIn .4s var(--ease)}
+.vf-build .cw{transform:scale(.72)}
+.vf-buildtxt{color:var(--teal-300);font-family:'Space Grotesk';margin-top:-.6rem}
+.vf-controls{display:flex;align-items:center;gap:.8rem;padding:.6rem .9rem;border-top:1px solid var(--glass-border);background:rgba(4,17,15,.5)}
+.vf-controls button{width:30px;height:30px;border-radius:50%;background:var(--panel);border:1px solid var(--glass-border);color:var(--teal-300);display:grid;place-items:center;font-size:.7rem}
+.vf-progress{flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,.1);overflow:hidden}
+#vf-bar{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal-400),var(--amber-400))}
+#vf-step{font-size:.78rem;color:var(--fg-muted);min-width:140px;text-align:right}
+@media(max-width:520px){#vf-step{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<canvas id="bg-canvas"></canvas>
+<div class="noise"></div>
+
+<!-- NAV -->
+<header class="nav" id="nav">
+  <a class="brand" href="#top"><span class="mark">C</span> Calpus</a>
+  <nav class="nav-links">
+    <a href="#features">Features</a><a href="#demo">See it work</a><a href="#how">How it works</a>
+    <a href="#exam">Exam Radar</a><a href="#pricing">Pricing</a>
+  </nav>
+  <div class="nav-actions">
+    <button class="btn btn-ghost" onclick="openAuth('login')">Log in</button>
+    <button class="btn btn-primary" onclick="openAuth('signup')"><span class="lg-only">Start 2-day free trial</span><span class="sm-only">Free trial</span></button>
+  </div>
+</header>
+
+<main id="top">
+  <!-- HERO -->
+  <div class="hero">
+    <div id="hero-copy">
+      <span class="chip" style="margin-bottom:1.2rem">🎓 Built for Calicut University students</span>
+      <h1>Meet Calpus.<br><span class="grad">Your campus AI tutor.</span></h1>
+      <p class="lead">Calpus reads your notes and <b>5–6 years of Calicut University question papers</b>, explains any topic with <b>marks-wise questions</b>, builds editable presentations, and predicts your next exam.</p>
+      <div class="hero-cta">
+        <button class="btn btn-primary" onclick="openAuth('signup')">Start 2-day free trial
+          <svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button class="btn btn-ghost" onclick="openApp()">
+          <svg class="i" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/></svg> Try the demo</button>
+      </div>
+      <div class="hero-stats">
+        <div><b>2 days</b><span>free trial for all</span></div>
+        <div><b id="hp-price">₹10</b><span>/month after</span></div>
+        <div><b>🎙</b><span>voice + 12 languages</span></div>
+      </div>
+    </div>
+    <div class="hero-visual stage">
+      <!-- animated Calpus -->
+      <div class="calpus" id="calpus-hero">
+        <div class="ring r3"></div><div class="ring r2"></div><div class="ring r1"></div>
+        <div class="orbit"><span class="spark"></span></div>
+        <div class="orbit b"><span class="spark"></span></div>
+        <div class="core">
+          <div class="cap"><div class="tassel"></div><div class="board"></div><div class="btn-top"></div></div>
+          <div class="face">
+            <div class="eyes"><span class="eye"></span><span class="eye"></span></div>
+            <div class="cheeks"><span class="cheek"></span><span class="cheek"></span></div>
+            <div class="mouth"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <span class="eyebrow reveal">What Calpus does</span>
+    <h2 class="section-title reveal">One agent for your whole semester</h2>
+    <p class="section-sub reveal">Every answer is grounded in <b>your</b> Calicut University material — not the open internet — so it always matches your syllabus.</p>
+    <div class="grid">
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M4 19V5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v5h5"/></svg></div>
+        <h3>Topic + marks-wise Q&amp;A</h3><p>Ask a topic — Calpus explains it, then gives 2, 5 and 10-mark questions on it, answered from your notes.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></div>
+        <h3>Editable presentations</h3><p>Pick a topic, choose Gemini / ChatGPT / Claude, and get slides you can edit right here, then export.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
+        <h3>Exam Radar</h3><p>Analyses past papers, finds the repeating pattern, and predicts the most likely questions for your next exam.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></div>
+        <h3>Translate anything</h3><p>Read any answer in Malayalam, Hindi, Tamil and 9 more — one tap.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3"/></svg></div>
+        <h3>Voice input</h3><p>Too tired to type? Just talk to Calpus and it answers — hands-free revision.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <h3>2-day free trial</h3><p>Everyone gets Calpus Pro free for 2 days. Continue for just <span id="feat-card-price">₹10</span>/month.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.5 8-8 11-4.5-3-8-6-8-11V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <h3>Stays in your syllabus</h3><p>Ask something off-syllabus and Calpus flags it first — then answers anyway if you still want it.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-4 12c1 1 1 2 1 3h6c0-1 0-2 1-3a7 7 0 0 0-4-12z"/><path d="M9 21h6"/></svg></div>
+        <h3>Remembers your study</h3><p>Calpus keeps a memory of what you studied and greets you back to pick up where you left off.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg></div>
+        <h3>Smart suggestions</h3><p>As you type, it suggests the exact questions &amp; keywords from your material.</p></div>
+      <div class="card reveal"><div class="ic"><svg class="i" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/></svg></div>
+        <h3>Doubt-solving, anytime</h3><p>Stuck at midnight before an exam? Calpus is online 24/7 with instant, grounded answers.</p></div>
+    </div>
+  </section>
+
+  <!-- DEMO / TUTORIAL -->
+  <section id="demo">
+    <span class="eyebrow reveal">See it work</span>
+    <h2 class="section-title reveal">Watch Calpus in action</h2>
+    <p class="section-sub reveal">Ask a topic → Calpus thinks → you get an exam-ready answer, then a presentation. Here's the flow.</p>
+    <div class="video-frame reveal">
+      <div class="vf-bar"><span class="vf-dot r"></span><span class="vf-dot y"></span><span class="vf-dot g"></span><span class="vf-url">calpus · live demo</span></div>
+      <div class="vf-screen" id="vf-screen"></div>
+      <div class="vf-controls">
+        <button id="vf-play" onclick="toggleDemo()" aria-label="Play or pause demo">⏸</button>
+        <div class="vf-progress"><span id="vf-bar"></span></div>
+        <span id="vf-step">Asking a question</span>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:1.6rem"><button class="btn btn-primary" onclick="openApp()">Try it yourself
+      <svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+  </section>
+
+  <!-- HOW -->
+  <section id="how">
+    <span class="eyebrow reveal">How it works</span>
+    <h2 class="section-title reveal">From sign-up to answer in four steps</h2>
+    <div class="steps">
+      <div class="step reveal"><h3>Sign up</h3><p>Tell Calpus your college, course, subject &amp; semester so answers match your Calicut University syllabus.</p></div>
+      <div class="step reveal"><h3>Your library loads</h3><p>Notes, textbooks and 5–6 years of past papers become Calpus's brain.</p></div>
+      <div class="step reveal"><h3>Ask by text or voice</h3><p>Type or speak. Calpus explains, quizzes you, or builds editable slides.</p></div>
+      <div class="step reveal"><h3>Ace the exam</h3><p>Study predicted questions from Exam Radar and walk in prepared.</p></div>
+    </div>
+  </section>
+
+  <!-- EXAM RADAR -->
+  <section id="exam">
+    <div class="glass reveal" style="padding:2.4rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center">
+      <div>
+        <span class="chip" style="margin-bottom:1rem">Exam Radar</span>
+        <h2 class="section-title" style="font-size:2.1rem">Calpus learns the pattern of your paper</h2>
+        <p class="section-sub">Upload 5–6 years of Calicut University question papers. Calpus clusters repeated topics, weights them by frequency and recency, and predicts your next exam.</p>
+        <button class="btn btn-accent" style="margin-top:1.4rem" onclick="quickAsk('Predict my next exam questions')">See a prediction</button>
+      </div>
+      <div style="display:grid;gap:.7rem">
+        <div class="stat" style="display:flex;justify-content:space-between;align-items:center"><span>Fleet Management &amp; vehicle bodies</span><b style="font-size:1.1rem;color:var(--grade-green)">92% likely</b></div>
+        <div class="stat" style="display:flex;justify-content:space-between;align-items:center"><span>Standing / running / overhead costs</span><b style="font-size:1.1rem;color:var(--amber-400)">81% likely</b></div>
+        <div class="stat" style="display:flex;justify-content:space-between;align-items:center"><span>Vehicle routing &amp; scheduling</span><b style="font-size:1.1rem;color:var(--teal-300)">74% likely</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <span class="eyebrow reveal">Pricing</span>
+    <h2 class="section-title reveal">Free for 2 days. Then a cup of chai a month.</h2>
+    <p class="section-sub reveal">Every student starts with a 2-day free trial — no payment upfront.</p>
+    <div class="price-wrap">
+      <div class="plan reveal">
+        <h3>Free Trial</h3><div class="amt">₹0<small>/ 2 days</small></div>
+        <p style="color:var(--fg-muted);font-size:.9rem">Full Calpus Pro, free for everyone for the first 2 days.</p>
+        <ul>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Everything unlocked, 2 days</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Topic + marks-wise questions</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Presentations &amp; voice</li>
+        </ul>
+        <button class="btn btn-ghost" onclick="openAuth('signup')">Start free trial</button>
+      </div>
+      <div class="plan featured reveal">
+        <h3>Calpus Pro</h3><div class="amt" id="feat-price">₹10<small>/month</small></div>
+        <p style="color:var(--fg-muted);font-size:.9rem">Continue after your 2-day trial. Renews monthly via UPI.</p>
+        <ul>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Unlimited questions</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Editable AI presentations</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Exam Radar predictions</li>
+          <li><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Voice + all languages</li>
+        </ul>
+        <button class="btn btn-accent" id="sub-btn" onclick="openPay()">Subscribe ₹10/mo</button>
+      </div>
+    </div>
+    <p style="text-align:center;margin-top:1.4rem;font-size:.82rem;color:var(--fg-muted)">Some students get Pro free — set by your institution in the admin console.</p>
+  </section>
+</main>
+
+<footer>
+  <div class="brand" style="justify-content:center;margin-bottom:.8rem"><span class="mark">C</span> Calpus</div>
+  <p>AI study companion for Calicut University students. © 2026.</p>
+  <p style="margin-top:.6rem"><a onclick="openAdmin()" style="color:var(--teal-300);cursor:pointer">Institution / Admin login →</a></p>
+</footer>
+
+<!-- AUTH -->
+<div class="overlay" id="auth-overlay">
+  <div class="modal glass modal-pos">
+    <button class="x" onclick="closeOverlay('auth-overlay')">×</button>
+    <div id="view-login">
+      <h2>Welcome back</h2>
+      <p class="sub">Log in to continue studying with Calpus.</p>
+      <div class="field"><label>Email or Phone</label><input id="li-email" type="text" placeholder="you@gmail.com" /></div>
+      <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
+      <button class="btn btn-primary" style="width:100%" onclick="openApp()">Log in with password</button>
+      <button class="btn btn-ghost" style="width:100%;margin-top:.6rem" onclick="loginOTP()">✉ Log in with email OTP</button>
+      <p class="switch-line">New here? <b onclick="switchAuth('signup')">Start your 2-day free trial</b></p>
+    </div>
+    <div id="view-signup" style="display:none">
+      <h2>Create your profile</h2>
+      <p class="sub">Calpus uses this to give you <b>only</b> the material for your Calicut University course &amp; semester. Your 2-day free trial starts now.</p>
+      <div class="two-col">
+        <div class="field"><label>Full name</label><input id="su-name" type="text" placeholder="Aarav Krishnan" /></div>
+        <div class="field"><label>Phone number</label><input type="tel" placeholder="+91 98765 43210" /></div>
+      </div>
+      <div class="field"><label>Email ID <span style="color:var(--fg-muted);font-weight:400">(any email — no college mail needed)</span></label><input id="su-email" type="email" placeholder="you@gmail.com" /></div>
+      <div class="field"><label>University <span style="color:var(--fg-muted);font-weight:400">(your answers are set to this)</span></label>
+        <select id="su-university"><option>University of Calicut</option><option>Kerala University (coming soon)</option><option>MG University (coming soon)</option><option>Kannur University (coming soon)</option><option>Other university (coming soon)</option></select></div>
+      <div class="two-col">
+        <div class="field"><label>Course</label>
+          <select>
+<option>B.A English Language and Literature</option>
+<option>B.A Arabic Language and Literature</option>
+<option>B.A Functional Arabic</option>
+<option>B.A Malayalam Language and Literature</option>
+<option>B.A Hindi Language and Literature</option>
+<option>B.A Afzal-Ul-Ulama</option>
+<option>B.A Functional English</option>
+<option>B.A Sanskrit Sahitya</option>
+<option>B.A Tamil Language and Literature</option>
+<option>B.A Urdu Language and Literature</option>
+<option>B.A Arabic and History (Double Main)</option>
+<option>B.A Arabic and IIslamic History (Double Main)</option>
+<option>B.A Malayalam and Sociology (Double Main)</option>
+<option>B.A Hindi and History (Double Main)</option>
+<option>B.A English and History (Double Main)</option>
+<option>B.A History</option>
+<option>B.A Economics</option>
+<option>B.A Economics with Foreign Trade</option>
+<option>B.A Economics with Islamic Finance</option>
+<option>B.A Development Economics</option>
+<option>B.A Political Science</option>
+<option>B.A Public Administration</option>
+<option>B.A West Asian Studies</option>
+<option>B.A Sociology</option>
+<option>B.A Philosophy</option>
+<option>B.A Islamic History</option>
+<option>B.A Islamic Finance with Computer Application</option>
+<option>B.A Islamic Studies</option>
+<option>Bachelor of Travel &amp; Tourism management (BTTM)</option>
+<option>Bachelor of Social Work (BSW)</option>
+<option>B A Econometrics and Data Management</option>
+<option>B.A MultiMedia</option>
+<option>B.A Graphic Design and Animation</option>
+<option>B.A Visual Communication</option>
+<option>B.A Film and Television</option>
+<option>B.A Journalism and Mass Communication</option>
+<option>BA Advertising and Sales Management</option>
+<option>B.A Music</option>
+<option>B.A Veena</option>
+<option>B.A Violin</option>
+<option>B.A Mridangam</option>
+<option>Bachelor of Theatre Arts (BTA)</option>
+<option>Bachelor of Fine Arts (BFA)</option>
+<option>Bachelor of Fine Arts in Art History and Visual Studies</option>
+<option>Bachelor of Commerce with Taxation</option>
+<option>Bachelor of Commerce (B Com)</option>
+<option>Bachelor of Tourism and Hotel Management (BTHM)</option>
+<option>Bachelor of Hotel Administration (BHA)</option>
+<option selected>Bachelor of Business Administration (BBA)</option>
+<option>Bachelor of Commerce (Honours)</option>
+<option>B.Com (Professional)</option>
+<option>BA in Human Resource Management (BA HRM)</option>
+<option>B.Tech Electrical and Electronics Engineering</option>
+<option>B.Tech Electronics and Communication Engineering</option>
+<option>B.Tech Information Technology</option>
+<option>B.Tech Mechanical Engineering</option>
+<option>B.Tech Printing Technology</option>
+<option>B.Arch Bachelor of Architecture</option>
+<option>Bachelor of Laws (LLB)</option>
+<option>Bachelor of Business Administration and Bachelor of Laws (Honours) BBA LLB</option>
+<option>Bachelor of Commerce and Bachelor of Laws (Honour) B.Com LLB</option>
+<option>Bachelor of Education</option>
+<option>Bachelor of Physical Education (2 Years)</option>
+<option>Bachelor of Physical Education (4Years)</option>
+<option>BEd (Hearing Impared)</option>
+<option>BSc Chemistry</option>
+<option>BSc Zoology</option>
+<option>BSc Botany</option>
+<option>BSc Physics</option>
+<option>BSc Applied Physics</option>
+<option>BSc Mathematics</option>
+<option>BSc Statistics</option>
+<option>BSc Psychology</option>
+<option>BSc Computer Science</option>
+<option>BSc Microbiology</option>
+<option>BSc Polymer Chemistry</option>
+<option>BSc Aquaculture</option>
+<option>BSc Geology</option>
+<option>BSc Food Technology</option>
+<option>BSc Industrial Chemistry</option>
+<option>BSc Biochemistry</option>
+<option>BSc Hotel Management &amp; Culinary Arts</option>
+<option>BSc Hotel Management &amp; Catering Science</option>
+<option>BSc Instrumentation</option>
+<option>BSc Plant Science</option>
+<option>BSc Home Science (Textiles &amp; Fashion Technology)</option>
+<option>BSc Family &amp; Community Science</option>
+<option>BSc Genetics</option>
+<option>BSc Geography</option>
+<option>BSc Printing Technology</option>
+<option>BSc Costume and Fashion Designing</option>
+<option>BSc Environment &amp; Water Management</option>
+<option>BSc Biotechnology</option>
+<option>BSc Forensic Science</option>
+<option>BSc Electronics</option>
+<option>BSc Information Technology</option>
+<option>BSc Mathematics and Economics</option>
+<option>BSc Mathematics and Physics</option>
+<option>Bachelor of Computer Application</option>
+</select></div>
+        <div class="field"><label>Semester</label>
+          <select><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div>
+      </div>
+      <div class="field"><label>Set a password</label><input type="password" placeholder="Create a password" /></div>
+      <button class="btn btn-primary" style="width:100%" onclick="signupOTP()">✉ Verify email &amp; start free trial</button>
+      <p class="switch-line">Already have an account? <b onclick="switchAuth('login')">Log in</b></p>
+    </div>
+  </div>
+</div>
+
+<!-- SESSION BLOCK (one login at a time) -->
+<div class="overlay" id="session-overlay">
+  <div class="modal glass modal-pos" style="max-width:400px;text-align:center">
+    <button class="x" onclick="closeOverlay('session-overlay')">×</button>
+    <div class="calpus" style="width:80px;height:80px;margin:0 auto 1rem"><div class="core"><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth"></div></div></div></div>
+    <h2>Already logged in</h2>
+    <p class="sub">Only one login is allowed at a time. Your account is active on another device.</p>
+    <div class="glass" style="padding:.9rem 1rem;border-radius:12px;margin-bottom:1.2rem;text-align:left;display:flex;gap:.7rem;align-items:center">
+      <svg class="i" viewBox="0 0 24 24" style="color:var(--teal-300);flex-shrink:0"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M11 18h2"/></svg>
+      <div><div style="font-size:.9rem;font-weight:600" id="sess-dev">Another device</div><div style="font-size:.78rem;color:var(--fg-muted)" id="sess-time">active now</div></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="forceLogin()">Log out there &amp; continue here</button>
+    <button class="btn btn-ghost" style="width:100%;margin-top:.6rem" onclick="closeOverlay('session-overlay')">Cancel</button>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="overlay" id="profile-overlay">
+  <div class="modal glass modal-pos" style="max-width:440px">
+    <button class="x" onclick="closeOverlay('profile-overlay')">×</button>
+    <h2>Your profile</h2>
+    <p class="sub">View and edit your details — Calpus tailors answers to your course &amp; semester.</p>
+    <div class="two-col"><div class="field"><label>Full name 🔒</label><input id="pf-name" type="text" readonly title="Name cannot be changed" /></div>
+      <div class="field"><label>Phone 🔒</label><input id="pf-phone" type="tel" readonly title="Phone cannot be changed" /></div></div>
+    <p style="font-size:.74rem;color:var(--fg-muted);margin:-.4rem 0 1rem">Name &amp; phone are locked to your account and can't be edited.</p>
+    <div class="field"><label>Email</label><input id="pf-email" type="email" /></div>
+    <div class="field"><label>University</label><select id="pf-university"><option>University of Calicut</option><option>Kerala University (coming soon)</option><option>MG University (coming soon)</option><option>Kannur University (coming soon)</option><option>Other university (coming soon)</option></select></div>
+    <div class="two-col"><div class="field"><label>Course</label><input id="pf-course" type="text" /></div>
+      <div class="field"><label>Semester</label><select id="pf-sem"><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveProfile()">Save changes</button>
+  </div>
+</div>
+
+<!-- OTP VERIFY -->
+<div class="overlay" id="otp-overlay">
+  <div class="modal glass modal-pos" style="max-width:380px;text-align:center">
+    <button class="x" onclick="closeOverlay('otp-overlay')">×</button>
+    <div class="calpus" style="width:80px;height:80px;margin:0 auto 1rem"><div class="core"><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div></div></div></div>
+    <h2>Verify your email</h2>
+    <p class="sub">We sent a 6-digit code to <b id="otp-email"></b></p>
+    <div class="field"><input id="otp-input" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" style="text-align:center;letter-spacing:.35em;font-size:1.2rem" onkeydown="if(event.key==='Enter')verifyOTP()" /></div>
+    <button class="btn btn-primary" style="width:100%" onclick="verifyOTP()">Verify &amp; continue</button>
+    <p class="switch-line">Didn't get it? <b onclick="resendOTP()">Resend code</b></p>
+  </div>
+</div>
+
+<!-- PAYMENT -->
+<div class="overlay" id="pay-overlay">
+  <div class="modal glass modal-pos" style="max-width:420px;text-align:center">
+    <button class="x" onclick="closeOverlay('pay-overlay')">×</button>
+    <div class="calpus" style="width:110px;height:110px;margin:0 auto 1rem">
+      <div class="ring r1"></div>
+      <div class="core"><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth"></div></div></div>
+    </div>
+    <h2>Continue with Calpus Pro</h2>
+    <p class="sub" id="pay-sub" style="margin-bottom:1rem">₹10 / month · after your 2-day free trial</p>
+    <div class="glass" style="padding:1rem;margin-bottom:1.2rem;text-align:left;border-radius:12px">
+      <div style="display:flex;justify-content:space-between;font-size:.9rem"><span>Calpus Pro (monthly)</span><b id="pay-amt">₹10.00</b></div>
+    </div>
+    <p style="font-size:.85rem;color:var(--fg-muted);margin-bottom:1rem">Pay to institution UPI</p>
+    <div style="display:grid;gap:.7rem">
+      <button class="btn btn-primary" onclick="payUPI('gpay')"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg> Pay with Google Pay</button>
+      <button class="btn btn-accent" onclick="payUPI('phonepe')"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 8v8M8 12h8"/></svg> Pay with PhonePe</button>
+      <button class="btn btn-ghost" onclick="payUPI('any')">Any UPI app</button>
+    </div>
+    <p style="font-size:.75rem;color:var(--fg-muted);margin-top:1.1rem">Demo opens a one-time UPI request. True monthly <b>auto-debit</b> needs UPI Autopay via a gateway — see README.</p>
+  </div>
+</div>
+
+<!-- CHAT APP -->
+<div class="overlay" id="app-overlay">
+  <div class="modal wide glass modal-pos">
+    <button class="x" style="z-index:10" onclick="closeOverlay('app-overlay')">×</button>
+    <div class="app-shell">
+      <aside class="app-side">
+        <div class="u"><div class="av" id="side-av">A</div><div><div id="side-name" style="font-size:.9rem;font-weight:600">Aarav Krishnan</div><div id="side-sub" style="font-size:.72rem;color:var(--fg-muted)">BBA · Sem 3 · Trial</div></div></div>
+        <button class="side-btn active">💬 Ask Calpus</button>
+        <button class="side-btn" onclick="openPPT('Warehousing')">🖼 Make a presentation</button>
+        <button class="side-btn" onclick="quickAsk('Generate marks-wise questions on Fleet Management')">📝 Marks-wise Q&amp;A</button>
+        <button class="side-btn" onclick="quickAsk('Predict my next exam questions')">📈 Exam Radar</button>
+        <button class="side-btn" onclick="openProfile()">👤 My profile</button>
+        <div id="mem-box" style="margin-top:.6rem;font-size:.76rem;color:var(--fg-muted);line-height:1.4"></div>
+        <button class="side-btn" style="margin-top:.4rem" onclick="logout()">🔒 Log out (free this device)</button>
+        <div class="side-foot">Grounded on: <b style="color:var(--teal-300)">Domestic Logistics Management notes, 2025 paper &amp; syllabus</b> · indexed · one login per device</div>
+      </aside>
+      <div class="app-main">
+        <div class="app-top">
+          <div class="who">
+            <div class="calpus mini"><div class="core"><div class="cap"><div class="board"></div></div><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth"></div></div></div></div>
+            <div class="status"><b>Calpus</b><span><span class="dot"></span>online · answering from your library</span></div>
+          </div>
+          <button class="mic" id="web-btn" onclick="toggleWeb()" title="Answer from the open internet" aria-label="Open internet mode" style="width:40px;height:40px;margin-right:.45rem"><svg class="i" viewBox="0 0 24 24" style="width:20px"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></button><select id="ai-engine" onchange="AI_ENGINE=this.value" title="Answer engine" style="padding:.45rem .5rem;border-radius:8px;background:rgba(4,17,15,.6);border:1px solid var(--glass-border);color:var(--fg);font-size:.78rem;margin-right:.45rem"><option value="">Built-in</option><option value="Gemini">Gemini</option><option value="ChatGPT">ChatGPT</option><option value="Claude">Claude</option></select><button class="mic" id="tts-btn" onclick="toggleTTS()" title="Calpus voice reply" aria-label="Toggle Calpus voice" style="width:40px;height:40px;margin-right:.5rem"><svg class="i" viewBox="0 0 24 24" style="width:20px"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg></button>
+          <div class="lang-sel">
+            <select id="lang" onchange="translateNote()">
+              <option value="en">English</option><option value="ml">മലയാളം</option><option value="hi">हिन्दी</option>
+              <option value="ta">தமிழ்</option><option value="te">తెలుగు</option><option value="kn">ಕನ್ನಡ</option>
+              <option value="bn">বাংলা</option><option value="es">Español</option>
+            </select>
+          </div>
+        </div>
+        <div id="calpus-slides"><div class="cs-track" id="cs-track"></div></div>
+        <div id="notif-banner" style="padding:.2rem 1.4rem 0"></div>
+        <div class="chat" id="chat">
+          <div class="msg bot"><div class="mini-av">✦ Calpus</div>Hi Aarav! I've read your Domestic Logistics Management notes, the 2025 question paper and the official syllabus. Ask any topic in the syllabus — I'll explain it and give 2, 5 &amp; 10-mark questions. If you ask something outside the syllabus, I'll tell you. Tap 🎙 to talk, or pick a shortcut below.</div>
+        </div>
+        <div class="suggest">
+          <button onclick="quickAsk('Explain Logistics Management')">Explain Logistics Management</button>
+          <button onclick="openPPT('Warehousing')">Make a presentation</button>
+          <button onclick="quickAsk('Predict my next exam questions')">Predict exam questions</button>
+        </div>
+        <div id="ac-box"></div>
+        <div class="composer">
+          <button class="mic" id="mic" onclick="toggleVoice()" title="Ask by voice" aria-label="Voice input"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3"/></svg></button>
+          <textarea id="input" rows="1" placeholder="Ask Calpus any topic, or press the mic…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea>
+          <button class="send" onclick="sendMsg()" aria-label="Send"><svg class="i" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PRESENTATION BUILDER -->
+<div class="overlay" id="ppt-overlay">
+  <div class="modal wide glass modal-pos" style="max-width:1100px">
+    <button class="x" style="z-index:10" onclick="closeOverlay('ppt-overlay')">×</button>
+    <div class="ppt-head"><h2 style="font-size:1.4rem">Presentation Builder</h2><p style="color:var(--fg-muted);font-size:.88rem">Generated from your material · click any text to edit it</p></div>
+    <div class="ppt-body">
+      <div class="ppt-ctrl">
+        <div class="field"><label>Topic</label><input id="ppt-topic" type="text" value="Warehousing" /></div>
+        <div class="field"><label>Number of slides</label><input id="ppt-count" type="number" value="6" min="3" max="15" /></div>
+        <div class="field"><label>How do you want the slides? <span style="color:var(--fg-muted);font-weight:400">(optional prompt)</span></label><textarea id="ppt-prompt" rows="3" placeholder="e.g. Simple language for a 5-min seminar, add a diagram slide, focus on 10-mark points, include Indian examples…"></textarea></div>
+        <label style="font-size:.82rem;color:var(--fg-muted)">AI engine</label>
+        <div class="engine" id="engine">
+          <button class="sel" data-e="Gemini" onclick="pickEngine(this)">Gemini</button>
+          <button data-e="ChatGPT" onclick="pickEngine(this)">ChatGPT</button>
+          <button data-e="Claude" onclick="pickEngine(this)">Claude</button>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:.6rem" onclick="toggleGuide()">📖 How to make a good presentation</button>
+        <div id="ppt-guide" style="display:none;font-size:.78rem;color:var(--fg-muted);line-height:1.55;background:rgba(4,17,15,.5);border:1px solid var(--glass-border);border-radius:10px;padding:.85rem;margin-bottom:.6rem">
+          <b style="color:var(--teal-300)">How many slides?</b> 6–10 for one topic — one idea per slide.<br><br>
+          <b style="color:var(--teal-300)">What to add, slide by slide:</b><br>
+          1. Title — topic + your name &amp; course<br>
+          2. Introduction — definition &amp; why it matters<br>
+          3–5. Key concepts — one per slide, 4–6 short bullets<br>
+          6. Diagram / worked example<br>
+          7. Types / advantages<br>
+          8. Exam focus — 2, 5 &amp; 10-mark points<br>
+          9. Summary — 3 key takeaways<br>
+          10. References — your notes, syllabus, 2025 paper<br><br>
+          <b style="color:var(--teal-300)">Tips:</b> ~6 words per bullet, large font (≥24pt), one visual per slide, high contrast, minimal text.<br><br><b style="color:var(--teal-300)">Images:</b> Calpus adds a relevant illustration to every slide automatically — matched to the slide content.
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-bottom:.6rem" onclick="genPPT()">✦ Generate slides</button>
+        <button class="btn btn-ghost btn-sm" style="width:100%;margin-bottom:.6rem" onclick="addSlide()">+ Add slide</button>
+        <button class="btn btn-accent btn-sm" style="width:100%" onclick="exportPPT()">⭳ Export presentation</button>
+        <p style="font-size:.75rem;color:var(--fg-muted);margin-top:1rem">Gemini/ChatGPT run via your local AI server (keys stay on the server, never in this page). Offline shows a template draft.</p>
+      </div>
+      <div class="ppt-slides" id="ppt-slides"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div class="overlay" id="adminlogin-overlay">
+  <div class="modal glass modal-pos" style="max-width:400px">
+    <button class="x" onclick="closeOverlay('adminlogin-overlay')">×</button>
+    <div class="calpus" style="width:90px;height:90px;margin:0 auto 1rem"><div class="core"><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div></div></div></div>
+    <h2>Admin access</h2>
+    <p class="sub">Restricted to the institution owner. Enter your ID &amp; login code.</p>
+    <div class="field"><label>Admin email</label><input id="admin-id" type="text" placeholder="you@gmail.com" /></div>
+    <div class="field"><label>Password</label><input id="admin-code" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()" /></div>
+    <button class="btn btn-primary" style="width:100%" onclick="adminLogin()">Enter console</button>
+    <p style="font-size:.75rem;color:var(--fg-muted);margin-top:1rem;text-align:center">Institution owner only. Access is remembered on this device.</p>
+  </div>
+</div>
+
+<!-- ADMIN CONSOLE -->
+<div class="overlay" id="admin-overlay">
+  <div class="modal wide glass modal-pos">
+    <button class="x" style="z-index:10" onclick="closeOverlay('admin-overlay')">×</button>
+    <div style="padding:1.6rem 2rem;border-bottom:1px solid var(--glass-border);display:flex;justify-content:space-between;align-items:center">
+      <div><h2 style="font-size:1.4rem">Institution Console</h2><p style="color:var(--fg-muted);font-size:.88rem">Calicut University · manage data, subscribers, offers</p></div>
+      <div style="display:flex;gap:.5rem;align-items:center"><span class="chip">Admin · you</span><button class="btn btn-ghost btn-sm" onclick="adminLogout()">Log out</button></div>
+    </div>
+    <div class="admin-grid">
+      <div class="stat up"><b id="s-active">4</b><span>Registered logins</span></div>
+      <div class="stat"><b>₹9,120</b><span>MRR this month</span></div>
+      <div class="stat"><b>912</b><span id="stat-paid">Paid · ₹10/mo</span></div>
+      <div class="stat"><b>372</b><span>On free trial</span></div>
+    </div>
+    <div class="admin-body">
+      <div style="display:grid;gap:1.4rem">
+        <div class="panel-box">
+          <h3>📤 Upload data to the database</h3>
+          <input type="file" id="data-files" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.csv" style="display:none" onchange="onFilesSelected(this)" />
+          <div class="upload" onclick="document.getElementById('data-files').click()">
+            <svg class="i" viewBox="0 0 24 24" style="width:30px;margin-bottom:.5rem;color:var(--teal-300)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            <div>Click to upload notes, papers &amp; <b>any files</b></div>
+            <div style="font-size:.8rem;margin-top:.3rem">PDF, DOCX, PPTX, TXT, CSV · stored &amp; indexed as Calpus data</div>
+          </div>
+          <div id="files-list" style="margin-top:1rem;font-size:.85rem"></div>
+        </div>
+        <div class="panel-box">
+          <h3>👥 Student logins &amp; roles <button class="btn btn-primary btn-sm" onclick="exportLogins()">⭳ Export CSV</button></h3>
+          <table id="logins-table"></table>
+        </div>
+      </div>
+      <div style="display:grid;gap:1.4rem">
+        <div class="panel-box">
+          <h3>🧑‍🤝‍🧑 Team &amp; co-workers</h3>
+          <p style="font-size:.82rem;color:var(--fg-muted);margin-bottom:.6rem">Create a login for a co-worker and give them a role.</p>
+          <div class="two-col"><div class="field" style="margin-bottom:.6rem"><input id="cw-user" type="text" placeholder="Username" /></div>
+            <div class="field" style="margin-bottom:.6rem"><input id="cw-pass" type="text" placeholder="Password" /></div></div>
+          <div class="field" style="margin-bottom:.6rem"><select id="cw-role"><option>Admin</option><option>Editor</option><option>Data Uploader</option><option>Support</option><option>Viewer</option></select></div>
+          <button class="btn btn-primary btn-sm" style="width:100%" onclick="addCoworker()">+ Add co-worker</button>
+          <table id="team-table" style="margin-top:1rem"></table>
+        </div>
+        <div class="panel-box">
+          <h3>🏷 Subscription &amp; pricing</h3>
+          <p style="font-size:.82rem;color:var(--fg-muted);margin-bottom:.6rem">Change the rate here — it updates every price on the site &amp; the UPI amount.</p>
+          <div class="two-col"><div class="field"><label>Monthly price (₹)</label><input id="price-input" type="number" value="10" /></div>
+            <div class="field"><label>Free trial (days)</label><input id="trial-input" type="number" value="2" /></div></div>
+          <div class="field"><label>Your UPI ID (receives payments)</label><input id="upi-input" type="text" value="niveddevan389-1@okicici" /></div>
+          <div class="field"><label>Offer code</label><input id="offer-input" type="text" placeholder="EXAM50 — 50% off first month" /></div>
+          <button class="btn btn-primary" style="width:100%" onclick="saveSettings()">Save &amp; apply everywhere</button>
+        </div>
+        <div class="panel-box">
+          <h3>🔔 Notifications</h3>
+          <p style="font-size:.82rem;color:var(--fg-muted);margin-bottom:.6rem">Shown to students on the page after login, for the number of days you set.</p>
+          <div class="field" style="margin-bottom:.6rem"><textarea id="notif-text" rows="2" placeholder="e.g. Exam timetable released — check your college portal"></textarea></div>
+          <div class="field" style="margin-bottom:.6rem"><label>Show for (days)</label><input id="notif-days" type="number" value="3" min="1" /></div>
+          <button class="btn btn-primary btn-sm" style="width:100%" onclick="addNotif()">+ Add notification</button>
+          <div id="notif-list" style="margin-top:1rem"></div>
+        </div>
+        <div class="panel-box">
+          <h3>🎁 Free access rules</h3>
+          <p style="font-size:.82rem;color:var(--fg-muted);margin-bottom:.6rem">Everyone gets the trial. These get Pro free beyond it:</p>
+          <div class="toggle-row">Free trial for all <span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="toggle-row">Top 3 rank in class <span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="toggle-row">Scholarship students <span class="tg on" onclick="this.classList.toggle('on')"></span></div>
+          <div class="toggle-row">Class representatives <span class="tg" onclick="this.classList.toggle('on')"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   1) 3D BACKGROUND — scroll makes it more exciting
+   ========================================================= */
+(function initThree(){
+  if(!window.THREE) return;
+  const canvas=document.getElementById('bg-canvas');
+  const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
+  renderer.setSize(innerWidth,innerHeight);
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,1000);
+  camera.position.z=50;
+
+  function field(count,color,size,spread,opacity){
+    const g=new THREE.BufferGeometry(),p=new Float32Array(count*3);
+    for(let i=0;i<count*3;i++)p[i]=(Math.random()-.5)*spread;
+    g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    const m=new THREE.PointsMaterial({size,color,transparent:true,opacity});
+    const pts=new THREE.Points(g,m);scene.add(pts);return pts;
+  }
+  const a=field(380,0x2DD4BF,.9,240,.7);
+  const b=field(160,0xF59E0B,.6,210,.5);
+  // live 3D geodesic knowledge core (rotates + grows with scroll)
+  const ico=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(24,1)),new THREE.LineBasicMaterial({color:0x2DD4BF,transparent:true,opacity:.13}));
+  scene.add(ico);
+  const ico2=new THREE.LineSegments(new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(40,1)),new THREE.LineBasicMaterial({color:0xF59E0B,transparent:true,opacity:.06}));
+  scene.add(ico2);
+  // dark floating panels (trionn-style) catching a rim of light
+  scene.add(new THREE.AmbientLight(0x1a3a36,0.7));
+  const dir=new THREE.DirectionalLight(0xdffcf5,1.05); dir.position.set(8,12,10); scene.add(dir);
+  const shards=new THREE.Group();
+  const smat=new THREE.MeshStandardMaterial({color:0x08201c,metalness:.92,roughness:.32,transparent:true,opacity:.92});
+  const smat2=new THREE.MeshStandardMaterial({color:0x0a2a26,metalness:.85,roughness:.4,transparent:true,opacity:.85});
+  for(let i=0;i<6;i++){
+    const g=new THREE.BoxGeometry(7+Math.random()*11,0.28,4+Math.random()*8);
+    const m=new THREE.Mesh(g,i%3===0?smat2:smat);
+    m.position.set((Math.random()-.5)*95,(Math.random()-.5)*95,(Math.random()-.5)*70-25);
+    m.rotation.set(Math.random()*Math.PI,Math.random()*Math.PI,Math.random()*Math.PI);
+    m.userData.spin=(Math.random()-.5)*0.0022;
+    shards.add(m);
+  }
+  scene.add(shards);
+
+  let mouseX=0,mouseY=0,lastScroll=0,vel=0,progress=0;
+  addEventListener('mousemove',e=>{mouseX=(e.clientX/innerWidth-.5);mouseY=(e.clientY/innerHeight-.5)});
+  addEventListener('scroll',()=>{
+    const y=window.scrollY;
+    vel=y-lastScroll;lastScroll=y;
+    const max=document.body.scrollHeight-innerHeight;
+    progress=max>0?Math.min(1,y/max):0;
+  });
+  const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function animate(){
+    requestAnimationFrame(animate);
+    if(document.hidden||document.body.style.overflow==='hidden'){return;}
+    if(!reduced){
+      const boost=1+progress*3;                       // deeper = faster
+      const v=Math.min(Math.abs(vel)*0.0006,0.04);    // scroll velocity kick
+      a.rotation.y+=.0006*boost+v; a.rotation.x+=.0002*boost;
+      b.rotation.y-=.0009*boost+v; a.rotation.z+=progress*0.0015;
+      ico.rotation.y+=.0016+progress*0.004; ico.rotation.x+=.0007; ico.scale.setScalar(1+progress*0.6);
+      ico2.rotation.y-=.001; ico2.rotation.z+=.0005;
+      shards.rotation.y+=0.0007+progress*0.0016;
+      shards.rotation.x+=((mouseY*0.28)-shards.rotation.x)*0.045;
+      shards.rotation.z+=((mouseX*0.18)-shards.rotation.z)*0.045;
+      shards.position.y=progress*22;
+      shards.children.forEach(function(m){m.rotation.x+=m.userData.spin;m.rotation.z+=m.userData.spin*0.6;});
+      camera.position.x+=(mouseX*14-camera.position.x)*.04;
+      camera.position.y+=(-mouseY*14-camera.position.y)*.04;
+      camera.position.z=50+progress*55;               // dramatic dolly on scroll
+      camera.lookAt(scene.position);
+      vel*=0.9;
+    }
+    renderer.render(scene,camera);
+  }
+  animate();
+  addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+})();
+
+/* =========================================================
+   2) GSAP — punchy scroll reveals + progress bar + hero scrub
+   ========================================================= */
+function splitWords(el){
+  [].slice.call(el.childNodes).forEach(function(node){
+    if(node.nodeType===3){ if(!node.textContent.trim())return;
+      var frag=document.createDocumentFragment();
+      node.textContent.split(/(\s+)/).forEach(function(part){
+        if(part.trim()===''){frag.appendChild(document.createTextNode(part));}
+        else{var sp=document.createElement('span');sp.className='w';sp.style.display='inline-block';sp.style.willChange='transform';sp.textContent=part;frag.appendChild(sp);}
+      });
+      el.replaceChild(frag,node);
+    } else if(node.nodeType===1 && node.tagName!=='BR'){ node.classList.add('w'); node.style.display='inline-block'; }
+  });
+}
+function magnetize(el){
+  var xTo=gsap.quickTo(el,'x',{duration:.4,ease:'elastic.out(1,0.4)'}), yTo=gsap.quickTo(el,'y',{duration:.4,ease:'elastic.out(1,0.4)'});
+  el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();xTo((e.clientX-r.left-r.width/2)*0.4);yTo((e.clientY-r.top-r.height/2)*0.6);});
+  el.addEventListener('mouseleave',function(){xTo(0);yTo(0);});
+}
+function tilt3d(el){
+  el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();var rx=((e.clientY-r.top)/r.height-.5)*-9, ry=((e.clientX-r.left)/r.width-.5)*11;el.style.transform='perspective(700px) rotateX('+rx+'deg) rotateY('+ry+'deg) translateY(-5px)';});
+  el.addEventListener('mouseleave',function(){el.style.transform='';});
+}
+if(window.gsap&&window.ScrollTrigger){
+  gsap.registerPlugin(ScrollTrigger);
+  var RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var SMALL=innerWidth<700;
+  var mainEl=document.querySelector('main'); if(mainEl)mainEl.style.perspective='1200px';
+
+  // hero headline: 3D flip-up per word
+  var heroH1=document.querySelector('.hero h1');
+  if(heroH1 && !RM && !SMALL){ splitWords(heroH1);
+    gsap.from(heroH1.querySelectorAll('.w'),{opacity:0,filter:'blur(18px)',x:function(){return (Math.random()-0.5)*46;},y:16,duration:1.1,stagger:.05,ease:'power3.out',delay:.15});
+  }
+
+  // generic 3D reveals (skip feature-grid cards — handled below)
+  gsap.utils.toArray('.reveal').forEach(function(el){
+    if(el.parentElement && el.parentElement.classList.contains('grid'))return;
+    if(SMALL){gsap.set(el,{opacity:1,y:0,rotateX:0});return;}
+    gsap.fromTo(el,{opacity:0,y:44,filter:'blur(12px)',rotateX:RM?0:-12,transformPerspective:820},{opacity:1,y:0,filter:'blur(0px)',rotateX:0,duration:.85,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none reverse'}});
+  });
+
+  // feature cards: staggered 3D fan-in
+  gsap.utils.toArray('#features .grid').forEach(function(g){
+    if(SMALL){gsap.set(g.children,{opacity:1,y:0,rotateY:0});return;}
+    gsap.from(g.children,{opacity:0,y:56,filter:'blur(10px)',rotateY:RM?0:20,transformPerspective:900,transformOrigin:'left center',duration:.85,stagger:.09,ease:'power3.out',scrollTrigger:{trigger:g,start:'top 82%'}});
+  });
+
+  // hero parallax + Calpus spins as you scroll away
+  gsap.to('#hero-copy',{y:-90,opacity:.1,ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:.6}});
+  gsap.to('#calpus-hero',{y:-40,scale:1.15,rotateY:RM?0:200,ease:'none',scrollTrigger:{trigger:'.hero',start:'top top',end:'bottom top',scrub:.8}});
+
+  // section titles drift for parallax depth
+  gsap.utils.toArray('h2.section-title').forEach(function(t){
+    gsap.fromTo(t,{y:30},{y:-30,ease:'none',scrollTrigger:{trigger:t,start:'top bottom',end:'bottom top',scrub:.4}});
+  });
+
+  // PIN + scrub the Exam Radar: panel rotates up in 3D, prediction bars grow
+  var examP=document.querySelector('#exam .glass');
+  if(examP && SMALL){gsap.set(examP,{opacity:1,y:0,rotateX:0,scale:1});gsap.set(document.querySelectorAll('#exam .stat'),{opacity:1,scaleX:1});}
+  else if(examP){
+    gsap.timeline({scrollTrigger:{trigger:'#exam',start:'top 80%',toggleActions:'play none none reverse'}})
+      .from(examP,{rotateX:RM?0:20,scale:.96,opacity:0,y:28,transformPerspective:1000,duration:.7,ease:'power3.out'})
+      .from('#exam .stat',{scaleX:0,transformOrigin:'left center',opacity:0,stagger:.14,duration:.5,ease:'power2.out'},'-=0.3');
+  }
+
+  if(!RM){
+    document.querySelectorAll('.hero-cta .btn').forEach(magnetize);
+    document.querySelectorAll('.card').forEach(tilt3d);
+    setTimeout(function(){ScrollTrigger.refresh();},400);
+  }
+  addEventListener('load',function(){ScrollTrigger.refresh();});
+}
+// scroll progress bar + nav bg
+addEventListener('scroll',()=>{
+  const max=document.body.scrollHeight-innerHeight;
+  document.getElementById('progress').style.width=(max>0?window.scrollY/max*100:0)+'%';
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>40);
+});
+
+/* =========================================================
+   3) ROUTING
+   ========================================================= */
+function open(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden'}
+function closeOverlay(id){document.getElementById(id).classList.remove('open');document.body.style.overflow=''}
+function openAuth(v){open('auth-overlay');switchAuth(v)}
+function switchAuth(v){document.getElementById('view-login').style.display=v==='login'?'block':'none';document.getElementById('view-signup').style.display=v==='signup'?'block':'none'}
+// ---- live capability slides in the agent window ----
+var CS=[
+ {i:'💬',t:'Ask any topic',s:'Explained, with 2 / 5 / 10-mark model answers'},
+ {i:'🖼️',t:'Make presentations',s:'AI slides you can edit — with images'},
+ {i:'📈',t:'Exam Radar',s:'Predicts your next exam from past papers'},
+ {i:'🎙️',t:'Voice + Malayalam',s:'Talk to Calpus, answers in your language'},
+ {i:'🧠',t:'Remembers you',s:'Picks up where you left off'}
+];
+function buildCS(){var tr=document.getElementById('cs-track');if(!tr)return;
+  tr.innerHTML=CS.map(function(c,i){return '<div class="cs-slide'+(i===0?' on':'')+'"><span class="ic">'+c.i+'</span><div><b>'+c.t+'</b><br><small>'+c.s+'</small></div></div>';}).join('')
+    +'<div class="cs-dots">'+CS.map(function(c,i){return '<i class="'+(i===0?'on':'')+'"></i>';}).join('')+'</div>';}
+var _csI=0,_csT=null;
+function startSlides(){buildCS();clearInterval(_csT);_csI=0;
+  _csT=setInterval(function(){
+    var sl=document.querySelectorAll('#calpus-slides .cs-slide'),dt=document.querySelectorAll('#calpus-slides .cs-dots i');
+    if(!sl.length)return;sl[_csI].classList.remove('on');dt[_csI].classList.remove('on');
+    _csI=(_csI+1)%sl.length;sl[_csI].classList.add('on');dt[_csI].classList.add('on');
+  },3200);}
+// ---- Email OTP for signup + login ----
+var SERVER='http://localhost:8787';
+var _otp={email:'',cb:null,mode:'local',localCode:''};
+async function sendOTP(email,cb){
+  if(!email||email.indexOf('@')<0){toast('Enter a valid email first.');return;}
+  _otp={email:email,cb:cb,mode:'local',localCode:''};
+  document.getElementById('otp-email').textContent=email;
+  document.getElementById('otp-input').value='';
+  open('otp-overlay');
+  try{
+    // The SERVER generates, stores and emails the code (production-secure).
+    var r=await fetch(SERVER+'/api/request-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+    if(r.ok){var d=await r.json();_otp.mode='server';
+      if(d.sent)toast('OTP sent to '+email+' ✦');
+      else toast('Demo mode — your OTP is '+d.demo);
+      return;
+    }
+  }catch(e){}
+  // server offline -> local demo fallback so the flow still works
+  _otp.mode='local';_otp.localCode=''+Math.floor(100000+Math.random()*900000);
+  toast('Offline demo — your OTP is '+_otp.localCode);
+}
+async function verifyOTP(){
+  var v=(document.getElementById('otp-input').value||'').trim();
+  if(!v){toast('Enter the code.');return;}
+  if(_otp.mode==='server'){
+    try{
+      var r=await fetch(SERVER+'/api/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:_otp.email,code:v})});
+      var d=await r.json();
+      if(r.ok&&d.ok){otpDone();return;}
+      toast(d.error||'Wrong code.');return;
+    }catch(e){toast('Could not reach the server.');return;}
+  }
+  if(v===_otp.localCode){otpDone();}else toast('Wrong code. Try again.');
+}
+function otpDone(){closeOverlay('otp-overlay');var cb=_otp.cb;_otp={email:'',cb:null,mode:'local',localCode:''};if(cb)cb();}
+function resendOTP(){ if(_otp.email) sendOTP(_otp.email,_otp.cb); }
+function signupOTP(){ sendOTP((document.getElementById('su-email').value||'').trim(), openApp); }
+function loginOTP(){ sendOTP((document.getElementById('li-email').value||'').trim(), openApp); }
+function openApp(){ if(!claimSession()){ showSessionBlock(sessionAlive()); return; } closeOverlay('auth-overlay');open('app-overlay');loadMemory();var _nm=document.getElementById('su-name');if(_nm&&_nm.value.trim())MEMORY.name=_nm.value.trim().split(' ')[0];renderStudentNotifs();memoryGreeting();renderMemory();startSlides();loadProfile(); }
+function openPay(){open('pay-overlay')}
+
+/* ---- ONE login per device: single active session lock ---- */
+// BACKEND: also enforce server-side (one active session token per account).
+const MY_TAB = 't'+Date.now()+Math.floor(Math.random()*1e6);
+function sessionAlive(){ try{ const s=JSON.parse(localStorage.getItem('calpus_session')||'null'); return s && (Date.now()-s.ts<8000) ? s : null; }catch(e){ return null; } }
+function deviceLabel(){var ua=navigator.userAgent||'';var br=/Edg/.test(ua)?'Edge':/Chrome/.test(ua)?'Chrome':/Firefox/.test(ua)?'Firefox':/Safari/.test(ua)?'Safari':'Browser';var os=/Mac/.test(ua)?'macOS':/Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':(/iPhone|iPad/.test(ua)?'iOS':(/Linux/.test(ua)?'Linux':'device'));return br+' on '+os;}
+function claimSession(){ const s=sessionAlive(); if(s && s.tab!==MY_TAB) return false; localStorage.setItem('calpus_session',JSON.stringify({tab:MY_TAB,ts:Date.now(),dev:deviceLabel()})); return true; }
+function logout(){ const s=sessionAlive(); if(s && s.tab===MY_TAB) localStorage.removeItem('calpus_session'); closeOverlay('app-overlay'); toast('Logged out — this account is free to log in again.'); }
+function showSessionBlock(s){var d=document.getElementById('sess-dev');if(d)d.textContent=(s&&s.dev)?s.dev:'Another device';var ago=s?Math.max(0,Math.round((Date.now()-s.ts)/1000)):0;var t=document.getElementById('sess-time');if(t)t.textContent='Active '+(ago<5?'just now':ago+'s ago');open('session-overlay');}
+function forceLogin(){ localStorage.setItem('calpus_session',JSON.stringify({tab:MY_TAB,ts:Date.now(),dev:deviceLabel()})); closeOverlay('session-overlay'); openApp(); }
+// heartbeat keeps this device's claim fresh while the app is open
+setInterval(()=>{ if(document.getElementById('app-overlay').classList.contains('open')){ const s=sessionAlive(); if(!s||s.tab===MY_TAB) localStorage.setItem('calpus_session',JSON.stringify({tab:MY_TAB,ts:Date.now(),dev:deviceLabel()})); } },3000);
+// if another tab on this device claims the session, close this one
+addEventListener('storage',e=>{ if(e.key==='calpus_session' && document.getElementById('app-overlay').classList.contains('open')){ const s=sessionAlive(); if(s && s.tab!==MY_TAB){ closeOverlay('app-overlay'); toast('Signed out — your account was opened on another tab/device.'); } } });
+addEventListener('beforeunload',()=>{ const s=sessionAlive(); if(s && s.tab===MY_TAB) localStorage.removeItem('calpus_session'); });
+function openAdmin(){ if(localStorage.getItem('calpus_admin')==='1'){ openAdminPanel(); } else { open('adminlogin-overlay'); } }
+
+/* =========================================================
+   4) PAYMENT — UPI deep link (one-time). Autopay = README.
+   ========================================================= */
+function payUPI(app){
+  // BACKEND: replace with a gateway UPI Autopay mandate (Razorpay/Cashfree/PhonePe PG)
+  const pa=SETTINGS.upi,pn='Calpus',am=String(SETTINGS.price),tn='Calpus Pro Monthly';
+  const base=`pa=${pa}&pn=${encodeURIComponent(pn)}&am=${am}&cu=INR&tn=${encodeURIComponent(tn)}`;
+  const url=app==='gpay'?`tez://upi/pay?${base}`:app==='phonepe'?`phonepe://pay?${base}`:`upi://pay?${base}`;
+  toast('Opening your UPI app for ₹'+SETTINGS.price+'…');
+  window.location.href=url;
+  setTimeout(()=>{closeOverlay('pay-overlay');toast('After payment, Calpus Pro continues automatically ✦')},1600);
+}
+
+/* =========================================================
+   5) VOICE INPUT
+   ========================================================= */
+let recognizing=false,recog=null;
+function toggleVoice(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;const mic=document.getElementById('mic');
+  if(!SR){toast('Voice input needs Chrome/Edge. Type instead 🙂');return}
+  if(recognizing){recog&&recog.stop();return}
+  recog=new SR();
+  recog.lang=({hi:'hi-IN',ml:'ml-IN',ta:'ta-IN',te:'te-IN',kn:'kn-IN',bn:'bn-IN',es:'es-ES'}[document.getElementById('lang').value])||'en-US';
+  recog.interimResults=true;
+  recog.onstart=()=>{recognizing=true;mic.classList.add('rec');toast('Listening… speak now')};
+  recog.onend=()=>{recognizing=false;mic.classList.remove('rec')};
+  recog.onerror=()=>{recognizing=false;mic.classList.remove('rec');toast('Mic error — check permissions')};
+  recog.onresult=e=>{let t='';for(const r of e.results)t+=r[0].transcript;document.getElementById('input').value=t;if(e.results[e.results.length-1].isFinal)setTimeout(sendMsg,250)};
+  recog.start();
+}
+
+/* =========================================================
+   6) CHAT — mock RAG (stub for real LLM over your DB)
+   ========================================================= */
+const chat=document.getElementById('chat');
+function speak(){document.querySelectorAll('.calpus').forEach(c=>{c.classList.add('speaking');setTimeout(()=>c.classList.remove('speaking'),2600)})}
+function addMsg(text,who){const d=document.createElement('div');d.className='msg '+who;if(who==='bot')d.innerHTML='<div class="mini-av">✦ Calpus</div>'+text;else d.textContent=text;chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
+// In-syllabus scope = the 16 official units of BBA3CJ202 (stored in Calpus DB).
+const SYLLABUS=['logistic','supply chain','inbound','outbound','in-plant','customer service','order processing','system design','integrated','transport','road','rail','air','waterway','pipeline','economics','cost','freight','carrier','multimodal','intermodal','fleet','distribution','hub','warehous','material handling','asrs','storage','retrieval','packaging','unitization','palletization','container','inventory','safety stock','eoq','reorder','tms','wms','rfid','gps','3pl','4pl','third-party','fourth-party','reverse logistics','green logistics','vehicle','routing','scheduling','way bill','reefer','driver','kilometer','standing cost','running cost','overhead','way bill','body type'];
+const ALLOW=['present','slide','ppt','exam','radar','predict','marks','question','q&a','hi ','hello','hey','thank','help'];
+function inSyllabus(q){const x=q.toLowerCase();if(ALLOW.some(k=>x.includes(k)))return true;return SYLLABUS.some(k=>x.includes(k));}
+function typingBubble(){const t=document.createElement('div');t.className='msg bot';t.innerHTML='<div style="display:flex;align-items:center;gap:.6rem"><div class="calpus mini think"><div class="core"><div class="cap"><div class="board"></div></div><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth"></div></div></div></div><div class="typing"><span></span><span></span><span></span></div></div>';chat.appendChild(t);chat.scrollTop=chat.scrollHeight;speak();return t;}
+var AI_ENGINE='', WEB_MODE=false;
+function guessPPT(q){var e=(typeof findEntry==='function')?findEntry(q):null;return e?e.ppt:null;}
+function toggleWeb(){WEB_MODE=!WEB_MODE;var b=document.getElementById('web-btn');if(b){b.style.background=WEB_MODE?'var(--amber-500)':'';b.style.color=WEB_MODE?'#1a0e00':'';}
+  if(WEB_MODE){if(!AI_ENGINE){AI_ENGINE='Gemini';var sel=document.getElementById('ai-engine');if(sel)sel.value='Gemini';}toast('🌐 Open-internet mode ON — Calpus answers beyond your syllabus via '+AI_ENGINE+'.');}
+  else toast('Open-internet mode off — back to your syllabus.');}
+async function webAnswer(q){var engine=AI_ENGINE||'Gemini';
+  try{var r=await fetch(SERVER+'/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:engine,question:q,lang:CUR_LANG,web:true})});
+    if(r.ok){var d=await r.json();if(d&&d.text)return {text:d.text,src:'🌐 Open internet · '+engine};}}catch(e){}
+  return null;}
+async function botReply(q){
+  if(WEB_MODE){ rememberTopic(q); var tw=typingBubble(); var w=await webAnswer(q); tw.remove();
+    if(w) streamMsg(w.text,w.src,guessPPT(q));
+    else streamMsg('🌐 Open-internet mode needs the AI server running (Gemini / ChatGPT / Claude). Start presentation-server, or switch web mode off to use your syllabus.','Calpus · web mode');
+    return; }
+  if(!inSyllabus(q)){ notInSyllabus(q); return; }
+  rememberTopic(q);
+  var t=typingBubble();
+  var ans=null;
+  if(AI_ENGINE){
+    try{
+      // Keys live in presentation-server/, never in this page.
+      var r=await fetch('http://localhost:8787/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:AI_ENGINE,question:q,lang:CUR_LANG})});
+      if(r.ok){var d=await r.json();if(d&&d.text){ans={text:d.text,src:d.src,ppt:guessPPT(q)};}}
+    }catch(e){}
+  }
+  if(!ans){
+    await new Promise(function(res){setTimeout(res,AI_ENGINE?200:800);});
+    ans=generateAnswer(q);
+    if(AI_ENGINE){ans.src=(ans.src||'')+' · built-in ('+AI_ENGINE+' server offline)';}
+  }
+  t.remove();streamMsg(ans.text,ans.src,ans.ppt);
+}
+function notInSyllabus(q){
+  speak();
+  const d=addMsg("<b>\u26A0\uFE0F That topic isn't in your syllabus</b> (Domestic Logistics Management, BBA3CJ202).\n\nWant me to answer it anyway?",'bot');
+  const r=document.createElement('div');r.className='row-act';
+  r.innerHTML=`<button class="btn btn-accent btn-sm" onclick="answerAnyway('${encodeURIComponent(q)}')">Yes, answer anyway</button>`;
+  d.appendChild(r);
+}
+function answerAnyway(enc){
+  const q=decodeURIComponent(enc);
+  const t=typingBubble();
+  const {text,src,ppt}=generateAnswer(q);
+  setTimeout(()=>{t.remove();streamMsg('(Outside your syllabus — answering as you asked.)\n\n'+text,src||'general knowledge (not from your syllabus)',ppt)},1000);
+}
+function streamMsg(text,src,ppt){
+  const d=addMsg('','bot');const body=document.createElement('span');
+  d.innerHTML='<div class="mini-av">✦ Calpus</div>';d.appendChild(body);
+  let i=0;const iv=setInterval(()=>{
+    body.textContent=text.slice(0,i+=4);chat.scrollTop=chat.scrollHeight;
+    if(i>=text.length){clearInterval(iv);speakOut(text);
+      if(src){const s=document.createElement('div');s.className='src';s.textContent=(CUR_LANG==='ml'?'📚 ആധാരം: ':'📚 Referenced: ')+src;d.appendChild(s)}
+      if(ppt){const r=document.createElement('div');r.className='row-act';r.innerHTML=`<button class="btn btn-accent btn-sm" onclick="openPPT('${ppt}')">🖼 Make editable slides</button>`;d.appendChild(r)}
+    }
+  },14);
+}
+// Small knowledge map so marks-wise ANSWERS scale with the weightage.
+// BACKEND: this comes from RAG over your uploaded material.
+var KB={
+ 'logistic':{def:'The planning, implementing and controlling of the efficient flow and storage of goods, services and information from origin to consumption, to meet customer needs at optimal cost.',
+   points:['Follows the 7 Rs: right product, quantity, condition, place, time, customer and cost','Covers transport, warehousing, inventory, packaging and information flow','Goal is customer satisfaction at minimum total cost','Links suppliers, manufacturers, warehouses and retailers'],
+   app:'Example: an online order moving from warehouse to sorting hub to last-mile delivery.'},
+ 'warehous':{def:'The storage of goods between production and consumption, covering receiving, storage, order picking and dispatch.',
+   points:['Functions: receiving, storage, order-picking and dispatch','Types: Public (rented), Private (owned), Bonded (customs-controlled)','A good layout supports smooth pick-pack-ship flow','Uses material-handling equipment and ASRS for speed'],
+   app:'Example: a bonded warehouse holding imported goods until duty is paid.'},
+ 'fleet':{def:'The planning, acquisition, maintenance and control of company vehicles to keep them running efficiently and safely.',
+   points:['Ensures optimal vehicle utilisation and less downtime','Covers acquisition (buy, lease or rent), maintenance and scheduling','Controls cost and ensures safety and legal compliance','Improves delivery performance and lowers operational risk'],
+   app:'Example: scheduling preventive maintenance to avoid breakdowns on delivery routes.'},
+ 'transport':{def:'The five domestic modes that move goods: road, rail, air, inland waterways and pipeline, each with different cost and speed.',
+   points:['Road: flexible and door-to-door, best for short and medium haul','Rail: low cost for heavy bulk over long distance','Air: fastest but costliest, for urgent or high-value goods','Waterways: cheap for heavy bulk; Pipeline: continuous liquids and gas'],
+   app:'Example: rail for bulk cement, but air for urgent spare parts.'},
+ 'inventory':{def:'Balancing enough stock to meet demand against the cost of holding that stock.',
+   points:['Safety Stock: a buffer against demand and supply uncertainty','EOQ: the order size that minimises ordering plus holding cost','Reorder Point: the stock level that triggers a new order','Prevents both stock-outs and excess holding cost'],
+   app:'Example: setting a reorder point so new stock arrives before shelves run empty.'},
+ '3pl':{def:'Outsourced logistics: a 3PL runs activities like transport and warehousing for you, while a 4PL manages your entire supply chain.',
+   points:['3PL: executes transport, warehousing and distribution for you','4PL: a single point of control that coordinates several 3PLs','4PL is more strategic and technology-driven','Both reduce the in-house logistics burden'],
+   app:'Example: a 4PL coordinating several 3PL carriers for a nationwide rollout.'}
+};
+function kbFor(topic){var k=(topic||'').toLowerCase();for(var key in KB){if(k.indexOf(key)>=0)return KB[key];}return null;}
+function marksBlock(topic){
+  var e=kbFor(topic);
+  var def=e?e.def:('The core definition of '+topic+', grounded on your syllabus material.');
+  var pts=e?e.points:['Main role or characteristic','How it works, or its main components','Why it matters in your course'];
+  var app=e?e.app:'Example: a relevant application from your notes.';
+  var five='   • '+pts.slice(0,3).join('\n   • ');
+  // 10 marks = essay: introduction, developed body, example, conclusion
+  var conn=['First, ','Second, ','Third, ','Finally, ','Also, ','Moreover, '];
+  var body=pts.map(function(p,i){return (conn[i]||'Also, ')+p+'.';}).join(' ');
+  var essay='   Introduction: '+def
+    +'\n\n   Body: '+body
+    +'\n\n   '+app
+    +'\n\n   Conclusion: Effective '+topic+' improves service quality and reduces total cost, making it essential to an efficient logistics system.';
+  return '\n\n📌 Questions & model answers on '+topic+' (answers sized to the marks):'
+    +'\n\n▸ 2 marks — Define '+topic+'.'
+    +'\n   Ans: '+def
+    +'\n\n▸ 5 marks — Explain '+topic+' with its key points.'
+    +'\n   Ans: '+def+'\n'+five
+    +'\n\n▸ 10 marks (essay) — Write an essay on '+topic+', with examples.'
+    +'\n   Ans:\n'+essay;
+}
+// BACKEND: replace with fetch('/api/ask') → RAG over your uploaded vector DB + LLM. Returns {text, src, ppt}.
+function generateAnswer(q){
+  const s=q.toLowerCase();
+  if(s.includes('predict')||s.includes('radar')||s.includes('next exam')||(s.includes('exam')&&s.includes('question')&&!s.includes('marks')))
+    return {text:"Exam Radar — Domestic Logistics Management (from the 2025 paper & syllabus pattern):\n\n\u25B8 Vehicle selection & body types \u2014 90% likely\n\u25B8 Standing / running / overhead costs \u2014 82%\n\u25B8 Fleet management \u2014 78%\n\u25B8 Vehicle routing & scheduling \u2014 72%\n\u25B8 Driver licensing & Driver's Hours \u2014 68%\n\nPattern: Section C (10 marks) almost always asks either vehicle selection or driver regulations, and costs appear every year in Section B. Start with fleet costs and vehicle types.",src:"Calpus KB \u2014 2025 answer key + syllabus"};
+  if(s.includes('marks')||s.includes('q&a')||s.includes('questions'))
+    return {text:"Here are marks-wise questions with model answers."+marksBlock('Fleet Management')+"\n\nWant the full 10-mark model answers? Just ask.",src:"Calpus KB \u2014 module notes + 2025 answer key"};
+  if(s.includes('present')||s.includes('slide')||s.includes('ppt'))
+    return {text:"I can build an editable presentation on this topic \u2014 pick Gemini, ChatGPT or Claude and I'll draft the slides from your material. Tap below.",src:"your Domestic Logistics Management library",ppt:"Warehousing"};
+  if(s.includes('warehous'))
+    return {text:"Warehousing is the storage of goods between production and consumption. Functions include receiving, storage, order picking, and dispatch. Types: Public (rented, shared), Private (owned by a firm), and Bonded (customs-controlled for duty-unpaid goods). A good warehouse layout supports smooth pick-pack-ship flow and uses material-handling equipment and ASRS to speed operations."+marksBlock('Warehousing'),src:"Calpus KB \u2014 Module III (Warehousing)",ppt:"Warehousing"};
+  if(s.includes('transport')||s.includes('mode'))
+    return {text:"Domestic transportation moves goods within a country using five modes: Road (flexible, door-to-door), Rail (bulk over long distance, low cost), Air (fast, costly, for urgent/high-value goods), Inland Waterways (cheap for heavy bulk), and Pipeline (continuous flow of liquids/gas). Carrier selection weighs cost, speed, reliability and the type of cargo."+marksBlock('Modes of Transportation'),src:"Calpus KB \u2014 Module II (Transportation)",ppt:"Modes of Transportation"};
+  if(s.includes('fleet'))
+    return {text:"Fleet management is the planning, acquisition, maintenance and control of a company's vehicles. Effective fleet management ensures optimal vehicle utilization, reduced downtime, timely maintenance, cost control and safety compliance \u2014 improving delivery performance and lowering operational risk."+marksBlock('Fleet Management'),src:"Calpus KB \u2014 Module II + 2025 Q12",ppt:"Fleet Management"};
+  if(s.includes('inventory')||s.includes('eoq')||s.includes('stock')||s.includes('reorder'))
+    return {text:"Inventory management balances holding enough stock to meet demand against the cost of holding it. Key ideas: Safety Stock (buffer against uncertainty), EOQ (the order quantity that minimizes total ordering + holding cost), and Reorder Point (the stock level that triggers a new order)."+marksBlock('Inventory Management'),src:"Calpus KB \u2014 Module IV (Inventory)",ppt:"Inventory Management"};
+  if(s.includes('3pl')||s.includes('4pl')||s.includes('third-party')||s.includes('fourth'))
+    return {text:"A 3PL (Third-Party Logistics) provider handles logistics activities like transport and warehousing on your behalf. A 4PL (Fourth-Party Logistics) provider goes further \u2014 it manages your entire supply chain, often coordinating multiple 3PLs, acting as a single point of control."+marksBlock('3PL and 4PL'),src:"Calpus KB \u2014 Module IV (3PL/4PL)",ppt:"3PL and 4PL"};
+  if(s.includes('logistic'))
+    return {text:"Logistics Management is the planning, implementing and controlling of the efficient flow and storage of goods, services and related information from point of origin to point of consumption. Its goal is to meet customer requirements (the 7 Rs \u2014 right product, quantity, condition, place, time, customer and cost) while optimizing cost and resources."+marksBlock('Logistics Management'),src:"Calpus KB \u2014 Module I + 2025 Q6",ppt:"Logistics Management"};
+  const topic=q.replace(/explain|what is|tell me about|define|the|about/gi,'').trim()||'this topic';
+  const T=topic.charAt(0).toUpperCase()+topic.slice(1);
+  return {text:`Here's the core idea of ${T}, grounded on your Domestic Logistics Management material \u2014 the key definition, why it matters, and how it's used.`+marksBlock(T),src:"your Calpus Domestic Logistics library",ppt:topic};
+}
+
+/* ===== language-aware answers (English + Malayalam built in for the demo) ===== */
+var CUR_LANG=(typeof CUR_LANG!=='undefined')?CUR_LANG:'en';
+var L={
+ en:{qa:'Questions & model answers on',sized:'(answers sized to the marks)',
+     m2:'2 marks — Define',m5:'5 marks — Explain',m5b:'with its key points',
+     m10:'10 marks (essay) — Write an essay on',m10b:'with examples',
+     ans:'Ans',intro:'Introduction',body:'Body',concl:'Conclusion',
+     conn:['First, ','Second, ','Third, ','Finally, ','Also, ','Moreover, '],
+     conclTail:function(n){return 'Effective '+n+' improves service quality and reduces total cost, making it essential to an efficient logistics system.';},
+     marksHdr:'Here are marks-wise questions with model answers.',
+     marksTail:'\n\nWant the full 10-mark model answers? Just ask.'},
+ ml:{qa:'ചോദ്യങ്ങളും മാതൃകാ ഉത്തരങ്ങളും —',sized:'(മാർക്കിന് അനുസരിച്ചുള്ള ഉത്തരങ്ങൾ)',
+     m2:'2 മാർക്ക് — നിർവചിക്കുക:',m5:'5 മാർക്ക് — വിശദീകരിക്കുക:',m5b:'പ്രധാന പോയിന്റുകളോടെ',
+     m10:'10 മാർക്ക് (ഉപന്യാസം) — ഉപന്യാസം എഴുതുക:',m10b:'ഉദാഹരണങ്ങളോടെ',
+     ans:'ഉത്തരം',intro:'ആമുഖം',body:'വിശദീകരണം',concl:'ഉപസംഹാരം',
+     conn:['ഒന്നാമതായി, ','രണ്ടാമതായി, ','മൂന്നാമതായി, ','അവസാനമായി, ','കൂടാതെ, ','മാത്രമല്ല, '],
+     conclTail:function(n){return 'ഫലപ്രദമായ '+n+' സേവന നിലവാരം മെച്ചപ്പെടുത്തുകയും ആകെ ചെലവ് കുറയ്ക്കുകയും ചെയ്യുന്നു; അതിനാൽ കാര്യക്ഷമമായ ലോജിസ്റ്റിക്‌സിന് ഇത് അത്യന്താപേക്ഷിതമാണ്.';},
+     marksHdr:'മാർക്ക് അനുസരിച്ചുള്ള ചോദ്യങ്ങളും മാതൃകാ ഉത്തരങ്ങളും ഇതാ.',
+     marksTail:'\n\nമുഴുവൻ 10-മാർക്ക് മാതൃകാ ഉത്തരങ്ങൾ വേണോ? ചോദിക്കൂ.'}
+};
+var TOPICS=[
+ {keys:['warehous'],ppt:'Warehousing',
+  title:{en:'Warehousing',ml:'വെയർഹൗസിംഗ്'},
+  intro:{en:'Warehousing is the storage of goods between production and consumption. Functions include receiving, storage, order picking, and dispatch. Types: Public, Private and Bonded warehouses.',
+         ml:'ഉൽപ്പാദനത്തിനും ഉപഭോഗത്തിനും ഇടയിൽ ചരക്കുകൾ സംഭരിക്കുന്നതാണ് വെയർഹൗസിംഗ്. സ്വീകരണം, സംഭരണം, ഓർഡർ പിക്കിംഗ്, ഡിസ്പാച്ച് എന്നിവ ഇതിൽ ഉൾപ്പെടുന്നു.'},
+  def:{en:'The storage of goods between production and consumption, covering receiving, storage, order picking and dispatch.',
+       ml:'ഉൽപ്പാദനത്തിനും ഉപഭോഗത്തിനും ഇടയിൽ ചരക്കുകൾ സംഭരിക്കുന്നത്; സ്വീകരണം, സംഭരണം, ഓർഡർ പിക്കിംഗ്, ഡിസ്പാച്ച് എന്നിവ ഉൾപ്പെടുന്നു.'},
+  points:{en:['Functions: receiving, storage, order-picking and dispatch','Types: Public (rented), Private (owned), Bonded (customs-controlled)','A good layout supports smooth pick-pack-ship flow','Uses material-handling equipment and ASRS for speed'],
+          ml:['ധർമ്മങ്ങൾ: സ്വീകരണം, സംഭരണം, ഓർഡർ പിക്കിംഗ്, ഡിസ്പാച്ച്','തരങ്ങൾ: പൊതു (വാടകയ്ക്ക്), സ്വകാര്യ (സ്വന്തം), ബോണ്ടഡ് (കസ്റ്റംസ് നിയന്ത്രിതം)','നല്ല ലേഔട്ട് പിക്ക്-പാക്ക്-ഷിപ്പ് ഒഴുക്ക് സുഗമമാക്കുന്നു','വേഗതയ്ക്കായി മെറ്റീരിയൽ ഹാൻഡ്‌ലിംഗ് ഉപകരണങ്ങളും ASRS-ഉം ഉപയോഗിക്കുന്നു']},
+  app:{en:'Example: a bonded warehouse holding imported goods until duty is paid.',
+       ml:'ഉദാഹരണം: ഡ്യൂട്ടി അടയ്ക്കുന്നതുവരെ ഇറക്കുമതി ചരക്കുകൾ സൂക്ഷിക്കുന്ന ഒരു ബോണ്ടഡ് വെയർഹൗസ്.'},
+  src:{en:'Calpus KB — Module III (Warehousing)',ml:'Calpus KB — മൊഡ്യൂൾ III (വെയർഹൗസിംഗ്)'}},
+
+ {keys:['fleet'],ppt:'Fleet Management',
+  title:{en:'Fleet Management',ml:'ഫ്ലീറ്റ് മാനേജ്‌മെന്റ്'},
+  intro:{en:'Fleet management is the planning, acquisition, maintenance and control of a company vehicles, so they run efficiently and safely.',
+         ml:'വാഹനങ്ങൾ കാര്യക്ഷമമായും സുരക്ഷിതമായും പ്രവർത്തിക്കാൻ അവയുടെ ആസൂത്രണം, സംഭരണം, പരിപാലനം, നിയന്ത്രണം എന്നിവയാണ് ഫ്ലീറ്റ് മാനേജ്‌മെന്റ്.'},
+  def:{en:'The planning, acquisition, maintenance and control of company vehicles to keep them running efficiently and safely.',
+       ml:'വാഹനങ്ങൾ കാര്യക്ഷമമായും സുരക്ഷിതമായും പ്രവർത്തിക്കാൻ അവയുടെ ആസൂത്രണം, സംഭരണം, പരിപാലനം, നിയന്ത്രണം എന്നിവ.'},
+  points:{en:['Ensures optimal vehicle utilisation and less downtime','Covers acquisition (buy, lease or rent), maintenance and scheduling','Controls cost and ensures safety and legal compliance','Improves delivery performance and lowers operational risk'],
+          ml:['വാഹനങ്ങളുടെ പരമാവധി ഉപയോഗവും കുറഞ്ഞ ഡൗൺടൈമും ഉറപ്പാക്കുന്നു','സംഭരണം (വാങ്ങൽ, ലീസ്, വാടക), പരിപാലനം, ഷെഡ്യൂളിംഗ് എന്നിവ ഉൾപ്പെടുന്നു','ചെലവ് നിയന്ത്രിക്കുകയും സുരക്ഷയും നിയമപാലനവും ഉറപ്പാക്കുകയും ചെയ്യുന്നു','ഡെലിവറി പ്രകടനം മെച്ചപ്പെടുത്തുകയും റിസ്ക് കുറയ്ക്കുകയും ചെയ്യുന്നു']},
+  app:{en:'Example: scheduling preventive maintenance to avoid breakdowns on delivery routes.',
+       ml:'ഉദാഹരണം: റൂട്ടുകളിൽ വാഹനങ്ങൾ കേടാകാതിരിക്കാൻ മുൻകൂർ പരിപാലനം ഷെഡ്യൂൾ ചെയ്യുന്നു.'},
+  src:{en:'Calpus KB — Module II + 2025 Q12',ml:'Calpus KB — മൊഡ്യൂൾ II + 2025 Q12'}},
+
+ {keys:['transport','mode'],ppt:'Modes of Transportation',
+  title:{en:'Modes of Transportation',ml:'ഗതാഗത മാർഗ്ഗങ്ങൾ'},
+  intro:{en:'Domestic transportation moves goods within a country using five modes: Road, Rail, Air, Inland Waterways and Pipeline.',
+         ml:'ചരക്കുകൾ ആഭ്യന്തരമായി നീക്കുന്ന അഞ്ച് മാർഗ്ഗങ്ങൾ: റോഡ്, റെയിൽ, വ്യോമം, ഉൾനാടൻ ജലപാത, പൈപ്പ്‌ലൈൻ.'},
+  def:{en:'The five domestic modes that move goods: road, rail, air, inland waterways and pipeline, each with different cost and speed.',
+       ml:'ചരക്കുകൾ നീക്കുന്ന അഞ്ച് ആഭ്യന്തര മാർഗ്ഗങ്ങൾ: റോഡ്, റെയിൽ, വ്യോമം, ഉൾനാടൻ ജലപാത, പൈപ്പ്‌ലൈൻ — ഓരോന്നിനും വ്യത്യസ്ത ചെലവും വേഗതയും.'},
+  points:{en:['Road: flexible and door-to-door, best for short and medium haul','Rail: low cost for heavy bulk over long distance','Air: fastest but costliest, for urgent or high-value goods','Waterways: cheap for heavy bulk; Pipeline: continuous liquids and gas'],
+          ml:['റോഡ്: വഴക്കമുള്ളത്, വീട്ടുവാതിൽ വരെ, ചെറിയ-ഇടത്തരം ദൂരത്തിന്','റെയിൽ: ദീർഘദൂര ഭാരമേറിയ ചരക്കിന് കുറഞ്ഞ ചെലവ്','വ്യോമം: ഏറ്റവും വേഗതയേറിയത് പക്ഷേ ചെലവേറിയത്, അടിയന്തിര ചരക്കിന്','ജലപാത: ഭാരമേറിയ ചരക്കിന് വിലകുറവ്; പൈപ്പ്‌ലൈൻ: തുടർച്ചയായ ദ്രാവക/വാതകം']},
+  app:{en:'Example: rail for bulk cement, but air for urgent spare parts.',
+       ml:'ഉദാഹരണം: ബൾക്ക് സിമന്റിന് റെയിൽ, പക്ഷേ അടിയന്തിര സ്പെയർ പാർട്സിന് വ്യോമം.'},
+  src:{en:'Calpus KB — Module II (Transportation)',ml:'Calpus KB — മൊഡ്യൂൾ II (ഗതാഗതം)'}},
+
+ {keys:['inventory','eoq','stock','reorder'],ppt:'Inventory Management',
+  title:{en:'Inventory Management',ml:'ഇൻവെന്ററി മാനേജ്‌മെന്റ്'},
+  intro:{en:'Inventory management balances holding enough stock to meet demand against the cost of holding it.',
+         ml:'ആവശ്യം നിറവേറ്റാൻ ആവശ്യമായ സ്റ്റോക്കും അത് സൂക്ഷിക്കുന്നതിന്റെ ചെലവും തമ്മിൽ സന്തുലനം നിലനിർത്തുന്നതാണ് ഇൻവെന്ററി മാനേജ്‌മെന്റ്.'},
+  def:{en:'Balancing enough stock to meet demand against the cost of holding that stock.',
+       ml:'ആവശ്യം നിറവേറ്റാൻ ആവശ്യമായ സ്റ്റോക്കും അത് സൂക്ഷിക്കുന്നതിന്റെ ചെലവും തമ്മിലുള്ള സന്തുലനം.'},
+  points:{en:['Safety Stock: a buffer against demand and supply uncertainty','EOQ: the order size that minimises ordering plus holding cost','Reorder Point: the stock level that triggers a new order','Prevents both stock-outs and excess holding cost'],
+          ml:['സേഫ്റ്റി സ്റ്റോക്ക്: ആവശ്യ/വിതരണ അനിശ്ചിതത്വത്തിനെതിരായ ബഫർ','EOQ: ഓർഡറിംഗ്, ഹോൾഡിംഗ് ചെലവ് കുറയ്ക്കുന്ന ഓർഡർ അളവ്','റീഓർഡർ പോയിന്റ്: പുതിയ ഓർഡർ ട്രിഗർ ചെയ്യുന്ന സ്റ്റോക്ക് നില','സ്റ്റോക്ക്-ഔട്ടും അധിക ഹോൾഡിംഗ് ചെലവും ഒഴിവാക്കുന്നു']},
+  app:{en:'Example: setting a reorder point so new stock arrives before shelves run empty.',
+       ml:'ഉദാഹരണം: ഷെൽഫ് ഒഴിയുന്നതിന് മുമ്പ് സ്റ്റോക്ക് എത്താൻ റീഓർഡർ പോയിന്റ് സജ്ജീകരിക്കുന്നു.'},
+  src:{en:'Calpus KB — Module IV (Inventory)',ml:'Calpus KB — മൊഡ്യൂൾ IV (ഇൻവെന്ററി)'}},
+
+ {keys:['3pl','4pl','third-party','fourth'],ppt:'3PL and 4PL',
+  title:{en:'3PL and 4PL',ml:'3PL, 4PL'},
+  intro:{en:'A 3PL provider handles logistics activities like transport and warehousing for you; a 4PL manages your entire supply chain.',
+         ml:'ഒരു 3PL നിങ്ങൾക്കായി ഗതാഗതം, വെയർഹൗസിംഗ് പോലുള്ളവ നടത്തുന്നു; ഒരു 4PL നിങ്ങളുടെ മുഴുവൻ വിതരണ ശൃംഖലയും കൈകാര്യം ചെയ്യുന്നു.'},
+  def:{en:'Outsourced logistics: a 3PL runs activities like transport and warehousing for you, while a 4PL manages your entire supply chain.',
+       ml:'ഔട്ട്‌സോഴ്‌സ് ചെയ്ത ലോജിസ്റ്റിക്‌സ്: 3PL നിങ്ങൾക്കായി ഗതാഗതം, വെയർഹൗസിംഗ് നടത്തുന്നു; 4PL മുഴുവൻ വിതരണ ശൃംഖലയും കൈകാര്യം ചെയ്യുന്നു.'},
+  points:{en:['3PL: executes transport, warehousing and distribution for you','4PL: a single point of control that coordinates several 3PLs','4PL is more strategic and technology-driven','Both reduce the in-house logistics burden'],
+          ml:['3PL: നിങ്ങൾക്കായി ഗതാഗതം, വെയർഹൗസിംഗ്, വിതരണം നടത്തുന്നു','4PL: നിരവധി 3PL-കളെ ഏകോപിപ്പിക്കുന്ന ഏക നിയന്ത്രണ കേന്ദ്രം','4PL കൂടുതൽ തന്ത്രപരവും സാങ്കേതികവിദ്യാധിഷ്ഠിതവുമാണ്','രണ്ടും ആന്തരിക ലോജിസ്റ്റിക്‌സ് ഭാരം കുറയ്ക്കുന്നു']},
+  app:{en:'Example: a 4PL coordinating several 3PL carriers for a nationwide rollout.',
+       ml:'ഉദാഹരണം: ദേശീയ വിതരണത്തിനായി നിരവധി 3PL കാരിയറുകളെ ഏകോപിപ്പിക്കുന്ന ഒരു 4PL.'},
+  src:{en:'Calpus KB — Module IV (3PL/4PL)',ml:'Calpus KB — മൊഡ്യൂൾ IV (3PL/4PL)'}},
+
+ {keys:['logistic'],ppt:'Logistics Management',
+  title:{en:'Logistics Management',ml:'ലോജിസ്റ്റിക്‌സ് മാനേജ്‌മെന്റ്'},
+  intro:{en:'Logistics Management is the planning, implementing and controlling of the efficient flow and storage of goods, services and information from origin to consumption.',
+         ml:'ഉത്ഭവസ്ഥാനത്ത് നിന്ന് ഉപഭോഗസ്ഥാനത്തേക്ക് ചരക്കുകൾ, സേവനങ്ങൾ, വിവരങ്ങൾ എന്നിവയുടെ കാര്യക്ഷമമായ ഒഴുക്കും സംഭരണവും ആസൂത്രണം ചെയ്യുകയും നിയന്ത്രിക്കുകയും ചെയ്യുന്ന പ്രക്രിയയാണ് ലോജിസ്റ്റിക്‌സ് മാനേജ്‌മെന്റ്.'},
+  def:{en:'The planning, implementing and controlling of the efficient flow and storage of goods, services and information from origin to consumption, to meet customer needs at optimal cost.',
+       ml:'കുറഞ്ഞ ചെലവിൽ ഉപഭോക്തൃ ആവശ്യങ്ങൾ നിറവേറ്റാൻ, ഉത്ഭവം മുതൽ ഉപഭോഗം വരെ ചരക്ക്, സേവനം, വിവരം എന്നിവയുടെ കാര്യക്ഷമമായ ഒഴുക്കും സംഭരണവും ആസൂത്രണം ചെയ്ത് നിയന്ത്രിക്കൽ.'},
+  points:{en:['Follows the 7 Rs: right product, quantity, condition, place, time, customer and cost','Covers transport, warehousing, inventory, packaging and information flow','Goal is customer satisfaction at minimum total cost','Links suppliers, manufacturers, warehouses and retailers'],
+          ml:['7 R-കൾ പിന്തുടരുന്നു: ശരിയായ ഉൽപ്പന്നം, അളവ്, അവസ്ഥ, സ്ഥലം, സമയം, ഉപഭോക്താവ്, ചെലവ്','ഗതാഗതം, വെയർഹൗസിംഗ്, ഇൻവെന്ററി, പാക്കേജിംഗ്, വിവര ഒഴുക്ക് എന്നിവ ഉൾപ്പെടുന്നു','കുറഞ്ഞ ആകെ ചെലവിൽ ഉപഭോക്തൃ സംതൃപ്തിയാണ് ലക്ഷ്യം','വിതരണക്കാർ, നിർമ്മാതാക്കൾ, വെയർഹൗസുകൾ, റീട്ടെയിലർമാർ എന്നിവരെ ബന്ധിപ്പിക്കുന്നു']},
+  app:{en:'Example: an online order moving from warehouse to sorting hub to last-mile delivery.',
+       ml:'ഉദാഹരണം: ഒരു ഓൺലൈൻ ഓർഡർ വെയർഹൗസിൽ നിന്ന് സോർട്ടിംഗ് ഹബ്ബിലേക്കും അവിടെ നിന്ന് ലാസ്റ്റ്-മൈൽ ഡെലിവറിയിലേക്കും നീങ്ങുന്നു.'},
+  src:{en:'Calpus KB — Module I + 2025 Q6',ml:'Calpus KB — മൊഡ്യൂൾ I + 2025 Q6'}}
+];
+var RADAR={
+ en:{text:"Exam Radar — Domestic Logistics Management (from the 2025 paper & syllabus pattern):\n\n▸ Vehicle selection & body types — 90% likely\n▸ Standing / running / overhead costs — 82%\n▸ Fleet management — 78%\n▸ Vehicle routing & scheduling — 72%\n▸ Driver licensing & Driver's Hours — 68%\n\nPattern: Section C (10 marks) almost always asks vehicle selection or driver regulations; costs appear every year in Section B. Start with fleet costs and vehicle types.",src:"Calpus KB — 2025 answer key + syllabus"},
+ ml:{text:"എക്‌സാം റഡാർ — ഡൊമസ്റ്റിക് ലോജിസ്റ്റിക്‌സ് മാനേജ്‌മെന്റ് (2025 പേപ്പറും സിലബസ് പാറ്റേണും അടിസ്ഥാനമാക്കി):\n\n▸ വാഹന തിരഞ്ഞെടുപ്പും ബോഡി തരങ്ങളും — 90% സാധ്യത\n▸ സ്റ്റാൻഡിംഗ്/റണ്ണിംഗ്/ഓവർഹെഡ് ചെലവുകൾ — 82%\n▸ ഫ്ലീറ്റ് മാനേജ്‌മെന്റ് — 78%\n▸ വാഹന റൂട്ടിംഗും ഷെഡ്യൂളിംഗും — 72%\n▸ ഡ്രൈവർ ലൈസൻസിംഗ് — 68%\n\nപാറ്റേൺ: സെക്ഷൻ C (10 മാർക്ക്) മിക്കവാറും വാഹന തിരഞ്ഞെടുപ്പോ ഡ്രൈവർ നിയമങ്ങളോ ചോദിക്കുന്നു; ചെലവുകൾ എല്ലാ വർഷവും സെക്ഷൻ B-യിൽ വരുന്നു. ഫ്ലീറ്റ് ചെലവുകളും വാഹന തരങ്ങളും കൊണ്ട് തുടങ്ങുക.",src:"Calpus KB — 2025 ഉത്തരസൂചിക + സിലബസ്"}
+};
+var PRESENT={
+ en:{text:"I can build an editable presentation on this topic — pick Gemini, ChatGPT or Claude and I'll draft the slides from your material. Tap below.",src:"your Domestic Logistics Management library",ppt:"Warehousing"},
+ ml:{text:"ഈ വിഷയത്തിൽ എഡിറ്റ് ചെയ്യാവുന്ന ഒരു പ്രസന്റേഷൻ ഉണ്ടാക്കാം — Gemini, ChatGPT അല്ലെങ്കിൽ Claude തിരഞ്ഞെടുക്കൂ; നിങ്ങളുടെ മെറ്റീരിയലിൽ നിന്ന് സ്ലൈഡുകൾ തയ്യാറാക്കാം. താഴെ ടാപ്പ് ചെയ്യൂ.",src:"നിങ്ങളുടെ ഡൊമസ്റ്റിക് ലോജിസ്റ്റിക്‌സ് ലൈബ്രറി",ppt:"Warehousing"}
+};
+function findEntry(t){var k=(t||'').toString().toLowerCase();for(var i=0;i<TOPICS.length;i++){var e=TOPICS[i];if(e.keys.some(function(x){return k.indexOf(x)>=0;})||k.indexOf(e.title.en.toLowerCase())>=0)return e;}return null;}
+function marksBlock(t,lang){
+  lang=(lang==='ml')?'ml':'en';var lb=L[lang];
+  var e=(t&&typeof t==='object')?t:findEntry(t);
+  var name=e?e.title[lang]:String(t);
+  var def=e?e.def[lang]:(lang==='ml'?(name+' — നിങ്ങളുടെ സിലബസ് മെറ്റീരിയലിനെ അടിസ്ഥാനമാക്കിയ പ്രധാന നിർവചനം.'):('The core definition of '+name+', grounded on your syllabus material.'));
+  var pts=e?e.points[lang]:(lang==='ml'?['പ്രധാന പങ്ക് അല്ലെങ്കിൽ സവിശേഷത','ഇത് എങ്ങനെ പ്രവർത്തിക്കുന്നു അല്ലെങ്കിൽ അതിന്റെ ഘടകങ്ങൾ','നിങ്ങളുടെ കോഴ്‌സിൽ ഇത് പ്രധാനമായിരിക്കുന്നത് എന്തുകൊണ്ട്']:['Main role or characteristic','How it works, or its main components','Why it matters in your course']);
+  var app=e?e.app[lang]:(lang==='ml'?'ഉദാഹരണം: നിങ്ങളുടെ കുറിപ്പുകളിൽ നിന്നുള്ള ഒരു പ്രസക്ത പ്രയോഗം.':'Example: a relevant application from your notes.');
+  var five='   • '+pts.slice(0,3).join('\n   • ');
+  var body=pts.map(function(p,i){return (lb.conn[i]||lb.conn[lb.conn.length-1])+p+'.';}).join(' ');
+  var essay='   '+lb.intro+': '+def+'\n\n   '+lb.body+': '+body+'\n\n   '+app+'\n\n   '+lb.concl+': '+lb.conclTail(name);
+  return '\n\n📌 '+lb.qa+' '+name+' '+lb.sized+':'
+    +'\n\n▸ '+lb.m2+' '+name+'.'
+    +'\n   '+lb.ans+': '+def
+    +'\n\n▸ '+lb.m5+' '+name+' '+lb.m5b+'.'
+    +'\n   '+lb.ans+': '+def+'\n'+five
+    +'\n\n▸ '+lb.m10+' '+name+' '+lb.m10b+'.'
+    +'\n   '+lb.ans+':\n'+essay;
+}
+function generateAnswer(q){
+  var s=q.toLowerCase();var lang=(CUR_LANG==='ml')?'ml':'en';
+  if(s.indexOf('predict')>=0||s.indexOf('radar')>=0||s.indexOf('next exam')>=0||(s.indexOf('exam')>=0&&s.indexOf('question')>=0&&s.indexOf('marks')<0))
+    return {text:RADAR[lang].text,src:RADAR[lang].src};
+  if(s.indexOf('marks')>=0||s.indexOf('q&a')>=0||s.indexOf('questions')>=0)
+    return {text:L[lang].marksHdr+marksBlock(findEntry('fleet'),lang)+L[lang].marksTail,src:lang==='ml'?'Calpus KB — മൊഡ്യൂൾ കുറിപ്പുകൾ + 2025 ഉത്തരസൂചിക':'Calpus KB — module notes + 2025 answer key'};
+  if(s.indexOf('present')>=0||s.indexOf('slide')>=0||s.indexOf('ppt')>=0)
+    return {text:PRESENT[lang].text,src:PRESENT[lang].src,ppt:PRESENT[lang].ppt};
+  for(var i=0;i<TOPICS.length;i++){var e=TOPICS[i];
+    if(e.keys.some(function(x){return s.indexOf(x)>=0;}))
+      return {text:e.intro[lang]+marksBlock(e,lang),src:e.src[lang],ppt:e.ppt};}
+  var topic=q.replace(/explain|what is|tell me about|define|the|about/gi,'').trim()||(lang==='ml'?'ഈ വിഷയം':'this topic');
+  var T=topic.charAt(0).toUpperCase()+topic.slice(1);
+  var gi=(lang==='ml')?(T+' എന്നതിന്റെ അടിസ്ഥാന ആശയം ഇതാ, നിങ്ങളുടെ ഡൊമസ്റ്റിക് ലോജിസ്റ്റിക്‌സ് മെറ്റീരിയലിനെ അടിസ്ഥാനമാക്കി.'):("Here's the core idea of "+T+", grounded on your Domestic Logistics Management material.");
+  return {text:gi+marksBlock(T,lang),src:lang==='ml'?'നിങ്ങളുടെ Calpus ലോജിസ്റ്റിക്‌സ് ലൈബ്രറി':'your Calpus Domestic Logistics library',ppt:topic};
+}
+
+function sendMsg(){const inp=document.getElementById('input');const q=inp.value.trim();if(!q)return;addMsg(q,'user');inp.value='';inp.style.height='auto';botReply(q)}
+function quickAsk(q){if(!document.getElementById('app-overlay').classList.contains('open'))openApp();addMsg(q,'user');botReply(q)}
+function translateNote(){var l=document.getElementById('lang').value;CUR_LANG=l;var n={en:'English',ml:'മലയാളം',hi:'हिन्दी',ta:'தமிழ்',te:'తెలుగు',kn:'ಕನ್ನಡ',bn:'বাংলা',es:'Español'};if(l==='ml')toast('കാൽപസ് ഇനി മുതൽ മലയാളത്തിൽ ഉത്തരം നൽകും ✦');else if(l==='en')toast('Calpus will answer in English.');else toast('Calpus will answer in '+n[l]+' (demo has Malayalam & English built in).');/* BACKEND: Bhashini/Google Translate for the rest */}
+
+/* =========================================================
+   7) PRESENTATION BUILDER
+   ========================================================= */
+let ppEngine='Gemini';
+function pickEngine(el){document.querySelectorAll('#engine button').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');ppEngine=el.dataset.e}
+function openPPT(topic){closeOverlay('app-overlay');open('ppt-overlay');if(topic)document.getElementById('ppt-topic').value=topic;genPPT()}
+// BACKEND: call Gemini/ChatGPT/Claude with retrieved chunks → slide JSON. Stub builds a template here.
+function slidesFor(topic,n){
+  n=Math.max(3,Math.min(15,parseInt(n)||6));
+  var deck=[
+    {t:topic,b:['Calicut University · '+ppEngine+' draft','Grounded on your uploaded notes']},
+    {t:'Introduction — What is '+topic+'?',b:['Clear definition in one line','Where it fits in your syllabus','Key terms to remember']},
+    {t:'Key concept',b:['Main idea explained simply','Why it matters']},
+    {t:'How it works',b:['Step-by-step idea','Diagram / example','Common mistakes to avoid']},
+    {t:'Types / Advantages',b:['List the main types','Key advantages']},
+    {t:'Worked example',b:['A solved example from your notes','Why each step is done']},
+    {t:'Exam focus',b:['2-mark: definition','5-mark: explain with example','10-mark: essay with application']},
+    {t:'Summary',b:['3 things to remember','Practice questions']},
+    {t:'References',b:['Your notes & syllabus','2025 question paper']}
+  ];
+  var refs=deck[deck.length-1];
+  if(n<deck.length){return deck.slice(0,n-1).concat([refs]);}
+  while(deck.length<n){deck.splice(deck.length-1,0,{t:'More on '+topic,b:['Additional key point','Supporting example from notes']});}
+  return deck;
+}
+function toggleGuide(){var g=document.getElementById('ppt-guide');g.style.display=g.style.display==='none'?'block':'none';}
+// Topic-matched slide illustrations (SVG — no external/paid image API needed).
+var ICONS={
+ warehouse:function(){return '<svg viewBox="0 0 120 90"><path d="M12 40 60 16 108 40" fill="none" stroke="#F59E0B" stroke-width="4" stroke-linejoin="round"/><rect x="20" y="40" width="80" height="38" rx="2" fill="none" stroke="#2DD4BF" stroke-width="4"/><rect x="34" y="52" width="16" height="26" fill="none" stroke="#2DD4BF" stroke-width="3"/><rect x="60" y="56" width="14" height="12" fill="none" stroke="#2DD4BF" stroke-width="3"/><rect x="80" y="56" width="10" height="12" fill="none" stroke="#2DD4BF" stroke-width="3"/></svg>';},
+ truck:function(){return '<svg viewBox="0 0 120 90"><rect x="14" y="34" width="52" height="30" rx="2" fill="none" stroke="#2DD4BF" stroke-width="4"/><path d="M66 42 h20 l14 12 v10 h-34 z" fill="none" stroke="#F59E0B" stroke-width="4" stroke-linejoin="round"/><circle cx="34" cy="70" r="7" fill="none" stroke="#2DD4BF" stroke-width="4"/><circle cx="84" cy="70" r="7" fill="none" stroke="#2DD4BF" stroke-width="4"/></svg>';},
+ boxes:function(){return '<svg viewBox="0 0 120 90"><rect x="30" y="44" width="26" height="26" fill="none" stroke="#2DD4BF" stroke-width="4"/><rect x="60" y="44" width="26" height="26" fill="none" stroke="#2DD4BF" stroke-width="4"/><rect x="45" y="16" width="26" height="26" fill="none" stroke="#F59E0B" stroke-width="4"/></svg>';},
+ network:function(){return '<svg viewBox="0 0 120 90"><path d="M60 32 34 58 M60 32 v26 M60 32 86 58" stroke="#2DD4BF" stroke-width="3"/><circle cx="60" cy="24" r="8" fill="#04110f" stroke="#F59E0B" stroke-width="4"/><circle cx="26" cy="66" r="8" fill="#04110f" stroke="#2DD4BF" stroke-width="4"/><circle cx="60" cy="66" r="8" fill="#04110f" stroke="#2DD4BF" stroke-width="4"/><circle cx="94" cy="66" r="8" fill="#04110f" stroke="#2DD4BF" stroke-width="4"/></svg>';},
+ chart:function(){return '<svg viewBox="0 0 120 90"><path d="M20 72 h84 M20 72 V18" stroke="#2DD4BF" stroke-width="4" fill="none"/><rect x="34" y="50" width="12" height="22" fill="#2DD4BF"/><rect x="54" y="38" width="12" height="34" fill="#F59E0B"/><rect x="74" y="28" width="12" height="44" fill="#2DD4BF"/></svg>';},
+ checklist:function(){return '<svg viewBox="0 0 120 90"><rect x="34" y="14" width="52" height="64" rx="3" fill="none" stroke="#2DD4BF" stroke-width="4"/><path d="M44 32 l6 6 10-12 M44 54 l6 6 10-12" stroke="#F59E0B" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M66 34 h12 M66 56 h12" stroke="#2DD4BF" stroke-width="3"/></svg>';},
+ book:function(){return '<svg viewBox="0 0 120 90"><path d="M60 24 C48 16 30 16 22 20 V70 C30 66 48 66 60 74 C72 66 90 66 98 70 V20 C90 16 72 16 60 24 Z" fill="none" stroke="#2DD4BF" stroke-width="4" stroke-linejoin="round"/><path d="M60 24 V74" stroke="#F59E0B" stroke-width="4"/></svg>';},
+ gears:function(){return '<svg viewBox="0 0 120 90"><circle cx="54" cy="46" r="15" fill="none" stroke="#2DD4BF" stroke-width="4"/><circle cx="54" cy="46" r="5" fill="none" stroke="#2DD4BF" stroke-width="3"/><path d="M54 25 v-7 M54 74 v-7 M75 46 h7 M26 46 h7 M69 31 l5-5 M34 61 l5-5 M69 61 l5 5 M34 31 l5 5" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/></svg>';},
+ logistics:function(){return '<svg viewBox="0 0 120 90"><circle cx="60" cy="45" r="26" fill="none" stroke="#2DD4BF" stroke-width="4"/><path d="M34 45 h52" stroke="#2DD4BF" stroke-width="3"/><path d="M60 19 a40 26 0 0 1 0 52 a40 26 0 0 1 0-52" fill="none" stroke="#2DD4BF" stroke-width="3"/><path d="M42 30 l10 8 M78 60 l-10-8" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/></svg>';},
+ title:function(){return '<svg viewBox="0 0 120 90"><rect x="22" y="18" width="76" height="46" rx="3" fill="none" stroke="#2DD4BF" stroke-width="4"/><path d="M60 64 v10 M46 78 h28" stroke="#2DD4BF" stroke-width="4" stroke-linecap="round"/><path d="M34 50 l12-14 8 8 12-16 10 12" fill="none" stroke="#F59E0B" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/></svg>';}
+};
+function slideImg(text){
+  var s=(text||'').toLowerCase();
+  var map=[
+   [['warehous','storage','pack','unitiz','pallet'],'warehouse'],
+   [['transport','vehicle','truck','road','rail','air','pipeline','mode','fleet','rout','carrier','driver'],'truck'],
+   [['inventory','eoq','reorder','stock'],'boxes'],
+   [['3pl','4pl','distribution','supply','network','hub','third-party','fourth'],'network'],
+   [['cost','price','economics','budget','freight','radar'],'chart'],
+   [['exam','marks','question','q&a','test','mark:'],'checklist'],
+   [['summary','reference','conclusion','recap','takeaway'],'book'],
+   [['introduction','what is','how it works','process','step','planning','concept','key'],'gears'],
+   [['logistic'],'logistics']
+  ];
+  for(var i=0;i<map.length;i++){for(var j=0;j<map[i][0].length;j++){if(s.indexOf(map[i][0][j])>=0)return ICONS[map[i][1]]();}}
+  return ICONS.gears();
+}
+function renderSlides(slides){
+  var wrap=document.getElementById('ppt-slides');wrap.innerHTML='';
+  slides.forEach(function(s,i){
+    var el=document.createElement('div');el.className='slide';
+    var img=(i===0)?ICONS.title():slideImg(s.t+' '+((s.b||[]).join(' ')));
+    var lis=(s.b||[]).map(function(x){return '<li contenteditable="true">'+x+'</li>';}).join('');
+    el.innerHTML='<span class="no">Slide '+(i+1)+'</span>'
+      +'<div class="slide-row"><div class="slide-txt"><h4 contenteditable="true">'+s.t+'</h4><ul>'+lis+'</ul></div>'
+      +'<div class="slide-img" title="relevant image">'+img+'</div></div>'
+      +'<span class="del" onclick="this.parentElement.remove()">Delete</span>';
+    wrap.appendChild(el);
+  });
+}
+function calpusWorkerHTML(){return '<div class="cw"><div class="cw-body"><div class="cw-cap"><span class="cw-tassel"></span><span class="cw-board"></span></div><div class="cw-core"><div class="cw-face"><div class="cw-eyes"><span class="cw-eye"></span><span class="cw-eye"></span></div><div class="cw-cheeks"><span></span><span></span></div><div class="cw-mouth"></div></div></div><div class="cw-arm l"><span class="cw-hand"></span></div><div class="cw-arm r"><span class="cw-hand"></span></div><div class="cw-leg l"></div><div class="cw-leg r"></div></div><div class="cw-stage"><span class="cw-card"></span><span class="cw-card"></span><span class="cw-card"></span></div></div>';}
+function showWorking(topic,engine){
+  document.getElementById('ppt-slides').innerHTML='<div class="cw-wrap">'+calpusWorkerHTML()+'<div class="cw-txt">Calpus is building your slides<span class="cw-dots"><i></i><i></i><i></i></span><span>'+engine+' · '+(topic||'')+'</span></div></div>';
+}
+function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+async function genPPT(){
+  var topic=document.getElementById('ppt-topic').value||'Topic';
+  var n=parseInt(document.getElementById('ppt-count').value)||6;
+  var instructions=(document.getElementById('ppt-prompt').value||'').trim();
+  showWorking(topic,ppEngine);              // full-body Calpus works live
+  toast(ppEngine+' is drafting '+n+' slides…');
+  var used=false,slides=null;
+  if(ppEngine==='Gemini'||ppEngine==='ChatGPT'){
+    try{
+      var r=await fetch('http://localhost:8787/api/slides',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:ppEngine,topic:topic,slides:n,lang:CUR_LANG,instructions:instructions})});
+      if(r.ok){var data=await r.json();if(data&&data.slides&&data.slides.length){slides=data.slides;used=true;}}
+    }catch(e){}
+  }
+  if(!used){ await wait(1400); slides=slidesFor(topic,n); }   // let the animation play
+  renderSlides(slides);
+  toast(used?('Slides drafted by '+ppEngine+' ✦'):(ppEngine==='Claude'?'Claude key not set — template draft.':'AI server offline — template draft.'));
+}
+function addSlide(){const wrap=document.getElementById('ppt-slides');const el=document.createElement('div');el.className='slide';el.innerHTML=`<span class="no">Slide ${wrap.children.length+1}</span><h4 contenteditable="true">New slide title</h4><ul><li contenteditable="true">Add your point…</li></ul><span class="del" onclick="this.parentElement.remove()">Delete</span>`;wrap.appendChild(el);el.scrollIntoView({behavior:'smooth'})}
+function exportPPT(){
+  // Demo export as a self-contained HTML deck (real app: server generates .pptx)
+  const topic=document.getElementById('ppt-topic').value||'presentation';
+  let html=`<html><head><meta charset="utf8"><title>${topic}</title><style>body{font-family:sans-serif;background:#04110f;color:#eafbf7;margin:0}section{min-height:100vh;padding:8vh 8vw;border-bottom:1px solid #123;display:flex;align-items:center}h1{color:#2dd4bf}li{font-size:1.3rem;margin:.6rem 0}.wrap{display:flex;gap:5vw;align-items:center;width:100%}.txt{flex:1}.img{width:34%;max-width:360px}.img svg{width:100%;height:auto}</style></head><body>`;
+  document.querySelectorAll('#ppt-slides .slide').forEach(function(s){
+    var t=s.querySelector('h4').innerText;
+    var items=[].slice.call(s.querySelectorAll('li')).map(function(li){return '<li>'+li.innerText+'</li>';}).join('');
+    var ie=s.querySelector('.slide-img');var img=ie?ie.innerHTML:'';
+    html+='<section><div class="wrap"><div class="txt"><h1>'+t+'</h1><ul>'+items+'</ul></div><div class="img">'+img+'</div></div></section>';
+  });
+  html+=`</body></html>`;
+  download(topic.replace(/\s+/g,'_')+'.html',html,'text/html');
+  toast('Presentation exported ✦ (demo: HTML deck · backend makes .pptx)');
+}
+
+/* =========================================================
+   8) ADMIN — gated login + exportable student logins (CSV)
+   ========================================================= */
+// ---- settings: single source of truth for price/trial/upi ----
+let SETTINGS={price:10,trial:2,upi:'niveddevan389-1@okicici',offer:''};
+function _set(id,txt){var e=document.getElementById(id);if(e)e.textContent=txt;}
+function applyPrice(){
+  var p=SETTINGS.price;
+  _set('hp-price','₹'+p);
+  var fp=document.getElementById('feat-price');if(fp)fp.innerHTML='₹'+p+'<small>/month</small>';
+  _set('feat-card-price','₹'+p);
+  _set('sub-btn','Subscribe ₹'+p+'/mo');
+  _set('pay-sub','₹'+p+' / month · after your '+SETTINGS.trial+'-day free trial');
+  _set('pay-amt','₹'+p+'.00');
+  _set('stat-paid','Paid · ₹'+p+'/mo');
+}
+function loadSettings(){try{var v=JSON.parse(localStorage.getItem('calpus_settings')||'null');if(v)SETTINGS=Object.assign(SETTINGS,v);}catch(e){}
+  var pi=document.getElementById('price-input');if(pi)pi.value=SETTINGS.price;
+  var ti=document.getElementById('trial-input');if(ti)ti.value=SETTINGS.trial;
+  var ui=document.getElementById('upi-input');if(ui)ui.value=SETTINGS.upi;}
+function saveSettings(){
+  SETTINGS.price=Math.max(1,parseInt(document.getElementById('price-input').value)||10);
+  SETTINGS.trial=Math.max(0,parseInt(document.getElementById('trial-input').value)||2);
+  SETTINGS.upi=document.getElementById('upi-input').value.trim()||SETTINGS.upi;
+  SETTINGS.offer=document.getElementById('offer-input').value.trim();
+  localStorage.setItem('calpus_settings',JSON.stringify(SETTINGS));
+  applyPrice();
+  toast('Saved — ₹'+SETTINGS.price+'/month applied to every price on the site.');
+}
+
+// ---- students + roles (BACKEND: pull from your database) ----
+const STU_ROLES=['Student','Free access','Class rep','Beta tester','Blocked'];
+const LOGINS=[
+  {name:'Aarav Krishnan',email:'aarav@gmail.com',phone:'+91 98470 11223',course:'BBA',sem:'3',status:'Trial',role:'Student'},
+  {name:'Diya Nair',email:'diya.nair@gmail.com',phone:'+91 90370 55621',course:'BSc Physics',sem:'6',status:'Paid',role:'Free access'},
+  {name:'Rohan Das',email:'rohan.d@gmail.com',phone:'+91 94470 88123',course:'BCom',sem:'2',status:'Free',role:'Class rep'},
+  {name:'Sara Iqbal',email:'sara.iqbal@gmail.com',phone:'+91 99610 22447',course:'BCA',sem:'4',status:'Paid',role:'Student'},
+];
+function setStudentRole(i,v){LOGINS[i].role=v;toast(LOGINS[i].name+' → '+v);}
+function buildLoginsTable(){
+  var tb=document.getElementById('logins-table');if(!tb)return;
+  var cls={Paid:'paid',Free:'free',Trial:'trial'};
+  var rows=LOGINS.map(function(u,i){
+    var opts=STU_ROLES.map(function(r){return '<option'+(u.role===r?' selected':'')+'>'+r+'</option>';}).join('');
+    return '<tr><td>'+u.name+'</td><td>'+u.email+'</td><td>'+u.course+' S'+u.sem+'</td><td><span class="badge '+cls[u.status]+'">'+u.status+'</span></td><td><select onchange="setStudentRole('+i+',this.value)" style="padding:.3rem;border-radius:6px;background:rgba(4,17,15,.6);border:1px solid var(--glass-border);color:var(--fg);font-size:.78rem">'+opts+'</select></td></tr>';
+  }).join('');
+  tb.innerHTML='<tr><th>Name</th><th>Email</th><th>Course</th><th>Status</th><th>Role</th></tr>'+rows;
+  _set('s-active',LOGINS.length);
+}
+function exportLogins(){
+  var head=['Name','Email','Phone','Course','Semester','Status','Role'];
+  var rows=LOGINS.map(function(u){return [u.name,u.email,u.phone,u.course,u.sem,u.status,u.role];});
+  var csv=[head].concat(rows).map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join(String.fromCharCode(10));
+  download('calpus_student_logins.csv',csv,'text/csv');
+  toast('Student logins exported to CSV.');
+}
+
+// ---- team / co-workers ----
+let COWORKERS=[{user:'nxdnived',role:'Owner'}];
+function addCoworker(){
+  var u=document.getElementById('cw-user').value.trim(),p=document.getElementById('cw-pass').value.trim(),r=document.getElementById('cw-role').value;
+  if(!u||!p){toast('Enter a username and password.');return;}
+  COWORKERS.push({user:u,role:r});
+  document.getElementById('cw-user').value='';document.getElementById('cw-pass').value='';
+  buildTeamTable();toast('Co-worker "'+u+'" created as '+r+'.');
+}
+function delCoworker(i){COWORKERS.splice(i,1);buildTeamTable();}
+function buildTeamTable(){
+  var t=document.getElementById('team-table');if(!t)return;
+  t.innerHTML='<tr><th>Username</th><th>Role</th><th></th></tr>'+COWORKERS.map(function(c,i){
+    return '<tr><td>'+c.user+'</td><td><span class="badge trial">'+c.role+'</span></td><td>'+(c.role==='Owner'?'':'<span style="color:var(--destructive);cursor:pointer" onclick="delCoworker('+i+')">remove</span>')+'</td></tr>';
+  }).join('');
+}
+
+// ---- data files (the database) — persists so future uploads accumulate ----
+function loadFiles(){try{var v=JSON.parse(localStorage.getItem('calpus_files')||'null');return v||[{name:'Calpus - Domestic Logistics KB.pdf',size:'0.06 MB'},{name:'Syllabus - BBA3CJ202.pdf',size:'0.02 MB'}];}catch(e){return[];}}
+let DATA_FILES=loadFiles();
+function saveFiles(){localStorage.setItem('calpus_files',JSON.stringify(DATA_FILES));}
+function onFilesSelected(inp){
+  for(var i=0;i<inp.files.length;i++){var f=inp.files[i];DATA_FILES.push({name:f.name,size:(f.size/1048576).toFixed(2)+' MB'});}
+  var n=inp.files.length;inp.value='';saveFiles();buildFilesList();
+  // BACKEND: upload file bytes to storage + index into the vector DB (see README).
+  toast(n+' file(s) added to the database.');
+}
+function delFile(i){DATA_FILES.splice(i,1);saveFiles();buildFilesList();}
+
+// ---- per-student memory (remembers name + what they studied, across sessions) ----
+let MEMORY={name:'',topics:[],count:0,last:0};
+function loadMemory(){try{var v=JSON.parse(localStorage.getItem('calpus_memory')||'null');if(v)MEMORY=Object.assign(MEMORY,v);}catch(e){}}
+function saveMemory(){MEMORY.last=Date.now();localStorage.setItem('calpus_memory',JSON.stringify(MEMORY));}
+function topicOf(q){var t=q.replace(/explain|what is|tell me about|define|make a presentation on|presentation|slides?|generate|marks-wise|questions?|predict|exam|radar|\bthe\b|\babout\b/gi,'').replace(/\s+/g,' ').trim();return t?t.charAt(0).toUpperCase()+t.slice(1):'';}
+function rememberTopic(q){MEMORY.count++;if(/present|slide|ppt|predict|radar|exam|marks|question|q&a|hello|thank/i.test(q)){saveMemory();return;}var t=topicOf(q);
+  if(t&&t.length<=40&&!MEMORY.topics.some(function(x){return x.toLowerCase()===t.toLowerCase();})){MEMORY.topics.push(t);if(MEMORY.topics.length>12)MEMORY.topics.shift();}
+  saveMemory();renderMemory();}
+function renderMemory(){var el=document.getElementById('mem-box');if(!el)return;
+  if(!MEMORY.topics.length){el.innerHTML='';return;}
+  el.innerHTML='🧠 <b style="color:var(--teal-300)">Calpus remembers</b> you studied: '+MEMORY.topics.slice(-6).join(', ')+'. <span style="color:var(--destructive);cursor:pointer" onclick="clearMemory()">clear</span>';}
+function clearMemory(){MEMORY={name:MEMORY.name,topics:[],count:0,last:Date.now()};saveMemory();renderMemory();toast('Study memory cleared.');}
+let _greeted=false;
+function memoryGreeting(){if(_greeted)return;_greeted=true;
+  if(MEMORY.topics.length){addMsg('Welcome back'+(MEMORY.name?', '+MEMORY.name:'')+'! Last time you studied <b>'+MEMORY.topics.slice(-3).join('</b>, <b>')+'</b>. Want to continue, or start a new topic?','bot');}}
+function buildFilesList(){
+  var el=document.getElementById('files-list');if(!el)return;
+  el.innerHTML='<div style="color:var(--fg-muted);margin-bottom:.4rem">Stored in database ('+DATA_FILES.length+'):</div>'+DATA_FILES.map(function(f,i){
+    return '<div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--glass-border)"><span>📄 '+f.name+'</span><span style="color:var(--fg-muted)">'+f.size+' &nbsp;<span style="color:var(--destructive);cursor:pointer" onclick="delFile('+i+')">✕</span></span></div>';
+  }).join('');
+}
+
+// ---- notifications (shown after login for N days) ----
+function loadNotifs(){try{return JSON.parse(localStorage.getItem('calpus_notifs')||'[]');}catch(e){return[];}}
+function saveNotifs(a){localStorage.setItem('calpus_notifs',JSON.stringify(a));}
+function addNotif(){
+  var txt=document.getElementById('notif-text').value.trim(),d=Math.max(1,parseInt(document.getElementById('notif-days').value)||1);
+  if(!txt){toast('Write a notification first.');return;}
+  var a=loadNotifs();a.push({text:txt,days:d,at:Date.now()});saveNotifs(a);
+  document.getElementById('notif-text').value='';buildNotifList();
+  toast('Notification added — visible to students for '+d+' day(s).');
+}
+function delNotif(i){var a=loadNotifs();a.splice(i,1);saveNotifs(a);buildNotifList();}
+function activeNotifs(){var now=Date.now();return loadNotifs().filter(function(n){return now-n.at < n.days*86400000;});}
+function buildNotifList(){
+  var el=document.getElementById('notif-list');if(!el)return;var a=loadNotifs();
+  el.innerHTML=a.length?a.map(function(n,i){
+    var left=Math.max(0,Math.ceil((n.days*86400000-(Date.now()-n.at))/86400000));
+    return '<div style="display:flex;justify-content:space-between;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--glass-border);font-size:.85rem"><span>🔔 '+n.text+' <span style="color:var(--fg-muted)">('+left+'d left)</span></span><span style="color:var(--destructive);cursor:pointer" onclick="delNotif('+i+')">✕</span></div>';
+  }).join(''):'<div style="color:var(--fg-muted)">No notifications yet.</div>';
+}
+function renderStudentNotifs(){
+  var el=document.getElementById('notif-banner');if(!el)return;
+  el.innerHTML=activeNotifs().map(function(n){
+    return '<div class="glass" style="border-color:var(--amber-400);padding:.6rem .9rem;margin-bottom:.5rem;font-size:.88rem;display:flex;gap:.5rem;align-items:center"><span>🔔</span><span>'+n.text+'</span></div>';
+  }).join('');
+}
+
+// ---- cute voice-back (TTS) ----
+let ttsOn=false;
+function toggleTTS(){
+  ttsOn=!ttsOn;var b=document.getElementById('tts-btn');
+  if(b){b.style.background=ttsOn?'var(--teal-500)':'';b.style.color=ttsOn?'#03110E':'';}
+  toast(ttsOn?'Calpus voice on — Siri-style 🔊':'Calpus voice off');
+  if(!ttsOn&&window.speechSynthesis)speechSynthesis.cancel();
+}
+function speakOut(text){
+  if(!ttsOn||!window.speechSynthesis)return;
+  var clean=text.replace(/[▸•📌🎙✦⚠️➤]/g,' ');
+  var u=new SpeechSynthesisUtterance(clean);
+  u.pitch=1;u.rate=0.98;u.volume=1;              // Siri-style: smooth & natural
+  var vs=speechSynthesis.getVoices();
+  var order=[/siri/i,/samantha/i,/aaron/i,/nicky/i,/serena/i,/karen/i,/ava/i,/allison/i,/daniel/i,/natural/i,/google us english/i,/google uk english/i];
+  var pref=null; for(var oi=0;oi<order.length&&!pref;oi++){var re=order[oi];pref=vs.find(function(v){return v.lang&&/^en/i.test(v.lang)&&re.test(v.name);});}
+  if(!pref)pref=vs.find(function(v){return /^en/i.test(v.lang);});
+  if(pref)u.voice=pref;
+  var l=document.getElementById('lang');
+  if(l&&l.value!=='en'){var map={hi:'hi-IN',ml:'ml-IN',ta:'ta-IN',te:'te-IN',kn:'kn-IN',bn:'bn-IN',es:'es-ES'};u.lang=map[l.value]||'en-US';}
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+
+// ---- admin auth (owner) + panel ----
+function adminLogin(){
+  var id=document.getElementById('admin-id').value.trim().toLowerCase();
+  var code=document.getElementById('admin-code').value.trim();
+  // BACKEND: verify server-side; never keep the password in client code
+  if(id==='nxdnived@gmail.com'&&code==='9207151732'){
+    localStorage.setItem('calpus_admin','1');
+    closeOverlay('adminlogin-overlay');openAdminPanel();
+  } else toast('Wrong email or password.');
+}
+function openAdminPanel(){
+  loadSettings();applyPrice();buildLoginsTable();buildTeamTable();buildFilesList();buildNotifList();
+  open('admin-overlay');
+}
+function adminLogout(){localStorage.removeItem('calpus_admin');closeOverlay('admin-overlay');toast('Admin logged out on this device.');}
+
+/* =========================================================
+   9) HELPERS
+   ========================================================= */
+function download(filename,content,type){
+  const blob=new Blob([content],{type});const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3200)}
+const ta=document.getElementById('input');ta&&ta.addEventListener('input',()=>{ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,120)+'px'});
+// ---- live typing suggestions (keywords & questions from the database) ----
+var SUGG=['Explain Logistics Management','Explain Warehousing','Explain Fleet Management','Explain Modes of Transportation','Explain Inventory Management (EOQ)','Explain 3PL and 4PL','Define Way Bill','Define GPS in logistics','Types of vehicle body','Standing, running and overhead costs','Vehicle routing and scheduling','Drivers Hours regulations','Vehicle acquisition','Reefer refrigerated body','Warehouse types: public, private, bonded','Hub-and-spoke distribution','Reverse logistics and green logistics','Safety stock and reorder point','Multimodal and intermodal transport','Order processing cycle','Make a presentation on Warehousing','Predict my next exam questions','Marks-wise questions on Fleet Management'];
+function acRender(list){var b=document.getElementById('ac-box');if(!b)return;
+  if(!list.length){b.classList.remove('show');b.innerHTML='';return;}
+  b.innerHTML=list.map(function(t){return '<div class="ac-item" data-t="'+t+'" onmousedown="acPick(event,this)"><span class="k">↳</span>'+t+'</div>';}).join('');
+  b.classList.add('show');}
+function acUpdate(){var el=document.getElementById('input');if(!el)return;var v=(el.value||'').trim().toLowerCase();
+  if(v.length<2){acRender([]);return;}
+  var m=SUGG.filter(function(t){return t.toLowerCase().indexOf(v)>=0;});
+  if(!m.length)m=SUGG.filter(function(t){var lt=t.toLowerCase();return v.split(' ').some(function(w){return w.length>2&&lt.indexOf(w)>=0;});});
+  acRender(m.slice(0,6));}
+function acPick(e,el){e.preventDefault();document.getElementById('input').value=el.getAttribute('data-t');acRender([]);document.getElementById('input').focus();}
+var _ta2=document.getElementById('input');
+if(_ta2){_ta2.addEventListener('input',acUpdate);_ta2.addEventListener('focus',acUpdate);_ta2.addEventListener('blur',function(){setTimeout(function(){acRender([]);},160);});}
+
+// ---- pleasant intro sound (plays on first interaction; autoplay-safe) ----
+var _introDone=false;
+function introChime(){ if(_introDone)return; _introDone=true;
+  try{var AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;var ctx=new AC();
+    [523.25,659.25,783.99,1046.5].forEach(function(f,i){var o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=f;var t=ctx.currentTime+i*0.11;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.2,t+0.03);g.gain.exponentialRampToValueAtTime(0.0008,t+0.5);o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.55);});
+    var o2=ctx.createOscillator(),g2=ctx.createGain();o2.type='triangle';o2.frequency.value=1568;var t2=ctx.currentTime+0.44;g2.gain.setValueAtTime(0.0001,t2);g2.gain.exponentialRampToValueAtTime(0.08,t2+0.05);g2.gain.exponentialRampToValueAtTime(0.0006,t2+0.75);o2.connect(g2);g2.connect(ctx.destination);o2.start(t2);o2.stop(t2+0.8);
+  }catch(e){}}
+addEventListener('pointerdown',introChime,{once:true});
+addEventListener('keydown',introChime,{once:true});
+
+// ---- tutorial "video" player: looping scripted walkthrough ----
+var demoPlaying=true, demoTimers=[];
+function dSched(ms,fn){demoTimers.push(setTimeout(fn,ms));}
+function dClear(){demoTimers.forEach(clearTimeout);demoTimers=[];}
+function dStep(t){var e=document.getElementById('vf-step');if(e)e.textContent=t;}
+function dProgress(){var b=document.getElementById('vf-bar');if(!b)return;b.style.transition='none';b.style.width='0%';void b.offsetWidth;b.style.transition='width 10.5s linear';b.style.width='100%';}
+function typeIn(el,text,i){if(!el)return;i=i||0;if(i<=text.length){el.textContent=text.slice(0,i);dSched(55,function(){typeIn(el,text,i+1);});}}
+var THINK='<div class="calpus mini think"><div class="core"><div class="cap"><div class="board"></div></div><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth"></div></div></div></div>';
+function runDemo(){
+  dClear();var S=document.getElementById('vf-screen');if(!S)return;
+  dProgress();dStep('Asking a question');
+  S.innerHTML='<div class="vf-input"><span class="vf-typed"></span><span class="vf-caret"></span></div>';
+  typeIn(S.querySelector('.vf-typed'),'Explain Warehousing',0);
+  dSched(2000,function(){dStep('You asked');S.innerHTML='<div class="vf-msg user">Explain Warehousing</div>';});
+  dSched(2600,function(){dStep('Calpus is thinking');S.innerHTML='<div class="vf-msg user">Explain Warehousing</div><div class="vf-typing">'+THINK+'<div class="typing"><span></span><span></span><span></span></div></div>';});
+  dSched(3800,function(){dStep('Grounded answer');S.innerHTML='<div class="vf-msg user">Explain Warehousing</div><div class="vf-msg bot"><b>✦ CALPUS</b><br>Warehousing is the storage of goods between production and consumption — receiving, storage, order-picking and dispatch. Types: public, private and bonded.</div>';});
+  dSched(6300,function(){dStep('Marks-wise answers');var b=document.createElement('div');b.className='vf-chip';b.innerHTML='▸ 2 / 5 / 10-mark model answers included ✓';S.appendChild(b);});
+  dSched(7700,function(){dStep('Making a presentation');S.innerHTML='<div class="vf-build">'+calpusWorkerHTML()+'<div class="vf-buildtxt">Building your slides…</div></div>';});
+  dSched(10500,function(){if(demoPlaying)runDemo();});
+}
+function toggleDemo(){demoPlaying=!demoPlaying;var p=document.getElementById('vf-play');if(p)p.textContent=demoPlaying?'⏸':'▶';
+  if(demoPlaying)runDemo();
+  else{dClear();var b=document.getElementById('vf-bar');if(b){var w=getComputedStyle(b).width;b.style.transition='none';b.style.width=w;}}}
+(function initDemo(){var sec=document.getElementById('demo');if(!sec)return;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches){var S=document.getElementById('vf-screen');if(S)S.innerHTML='<div class="vf-msg user">Explain Warehousing</div><div class="vf-msg bot"><b>✦ CALPUS</b><br>Warehousing is the storage of goods between production and consumption. Types: public, private and bonded. Includes 2/5/10-mark model answers.</div>';var c=document.querySelector('.vf-controls');if(c)c.style.display='none';return;}
+  if('IntersectionObserver' in window){new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){if(demoPlaying)runDemo();}else{dClear();}});},{threshold:.3}).observe(sec);}
+  else runDemo();
+})();
+
+// ---- profile: view & edit after login ----
+var PROFILE={name:'Aarav Krishnan',phone:'+91 98470 11223',email:'aarav@gmail.com',university:'University of Calicut',course:'BBA',sem:'Sem 3'};
+function loadProfile(){try{var v=JSON.parse(localStorage.getItem('calpus_profile')||'null');if(v)PROFILE=Object.assign(PROFILE,v);}catch(e){}applyProfileSidebar();}
+function applyProfileSidebar(){var n=document.getElementById('side-name');if(n)n.textContent=PROFILE.name;var sub=document.getElementById('side-sub');if(sub)sub.textContent=PROFILE.course+' · '+PROFILE.sem+' · Trial';var av=document.getElementById('side-av');if(av)av.textContent=(PROFILE.name||'S').charAt(0).toUpperCase();}
+function openProfile(){loadProfile();
+  document.getElementById('pf-name').value=PROFILE.name;document.getElementById('pf-phone').value=PROFILE.phone;document.getElementById('pf-email').value=PROFILE.email;
+  document.getElementById('pf-university').value=PROFILE.university;document.getElementById('pf-course').value=PROFILE.course;document.getElementById('pf-sem').value=PROFILE.sem;
+  open('profile-overlay');}
+function saveProfile(){
+  PROFILE.email=document.getElementById('pf-email').value.trim();
+  PROFILE.university=document.getElementById('pf-university').value;
+  PROFILE.course=document.getElementById('pf-course').value.trim()||PROFILE.course;
+  PROFILE.sem=document.getElementById('pf-sem').value;
+  localStorage.setItem('calpus_profile',JSON.stringify(PROFILE));
+  applyProfileSidebar();
+  if(typeof MEMORY==='object'&&MEMORY)MEMORY.name=PROFILE.name.split(' ')[0];
+  closeOverlay('profile-overlay');toast('Profile saved ✦');
+}
+// keep Calpus robot alive with changing expressions
+function _hideSvg(){var s=document.getElementById('cbot-svg');if(s)s.style.display='none';}
+function vidOK(el){el.style.display='block';_hideSvg();var i=document.querySelector('.cbot-img');if(i)i.style.display='none';}
+function vidFail(el){el.style.display='none';}
+function imgOK(el){if(document.querySelector('.cbot-vid')&&getComputedStyle(document.querySelector('.cbot-vid')).display!=='none')return;_hideSvg();el.style.display='block';}
+function imgFail(el){el.style.display='none';var s=document.getElementById('cbot-svg');if(s)s.style.display='block';}
+function calpusExp(name){document.querySelectorAll('.cbot').forEach(function(c){c.setAttribute('class','cbot exp-'+name);});}
+(function(){var seq=['happy','happy','think','happy','surprise','happy','wink','happy'],i=0;
+  setInterval(function(){ if(document.hidden)return; i=(i+1)%seq.length; calpusExp(seq[i]); },3600);})();
+// Calpus looks toward the mouse
+(function calpusLook(){
+  var el=document.getElementById('calpus-hero');
+  if(!el || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  var tx=0,ty=0,cx=0,cy=0;
+  addEventListener('mousemove',function(e){
+    var r=el.getBoundingClientRect();
+    tx=Math.max(-1,Math.min(1,(e.clientX-(r.left+r.width/2))/(innerWidth/2)));
+    ty=Math.max(-1,Math.min(1,(e.clientY-(r.top+r.height/2))/(innerHeight*0.6)));
+  });
+  (function loop(){ cx+=(tx-cx)*0.08; cy+=(ty-cy)*0.08;
+    el.style.setProperty('--lx',(cx*18)+'deg');
+    el.style.setProperty('--ly',(-cy*11)+'deg');
+    var eg=document.querySelector('#cbot-svg .eyes');
+    if(eg&&getComputedStyle(document.getElementById('cbot-svg')).display!=='none'){eg.setAttribute('transform','translate('+(cx*7).toFixed(1)+','+(cy*6).toFixed(1)+')');}
+    requestAnimationFrame(loop);
+  })();
+})();
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeOverlay(o.id)}));
+addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>closeOverlay(o.id))});
+
+// trionn-style momentum smooth scroll
+(function initLenis(){
+  if(!window.Lenis || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  var lenis=new Lenis({lerp:0.085,wheelMultiplier:1,smoothWheel:true,touchMultiplier:1.4});
+  if(window.gsap&&window.ScrollTrigger){
+    lenis.on('scroll',ScrollTrigger.update);
+    gsap.ticker.add(function(t){lenis.raf(t*1000);});
+    gsap.ticker.lagSmoothing(0);
+  } else {
+    function raf(t){lenis.raf(t);requestAnimationFrame(raf);} requestAnimationFrame(raf);
+  }
+  document.querySelectorAll('.overlay').forEach(function(o){o.setAttribute('data-lenis-prevent','');});
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){a.addEventListener('click',function(e){var id=a.getAttribute('href');if(id.length>1){var el=document.querySelector(id);if(el){e.preventDefault();lenis.scrollTo(el,{offset:-70});}}});});
+})();
+loadSettings();applyPrice();buildNotifList();
+if(window.speechSynthesis)speechSynthesis.onvoiceschanged=function(){};
+</script>
+</body>
+</html>
