@@ -54,11 +54,11 @@ img{max-width:100%}
 .btn-ghost:hover{background:rgba(45,212,191,.1)}
 .btn-sm{padding:.5rem 1rem;font-size:.85rem;min-height:38px}
 .chip{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:999px;background:var(--panel);border:1px solid var(--glass-border);font-size:.8rem;color:var(--teal-300);font-weight:500}
-.glass{background:var(--panel-strong);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--glass-border);border-radius:var(--radius)}
+.glass{background:rgba(6,32,28,.92);border:1px solid var(--glass-border);border-radius:var(--radius)}
 
 /* ===== NAV ===== */
 header.nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:1rem clamp(1rem,4vw,2.5rem);transition:background .3s,backdrop-filter .3s}
-header.nav.scrolled{background:rgba(4,17,15,.7);backdrop-filter:blur(14px);border-bottom:1px solid var(--glass-border)}
+header.nav.scrolled{background:rgba(4,17,15,.93);border-bottom:1px solid var(--glass-border)}
 .brand{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:1.25rem}
 .brand .mark{width:34px;height:34px;border-radius:10px;background:radial-gradient(circle at 30% 30%,var(--teal-300),var(--teal-500) 70%);box-shadow:var(--shadow-glow);display:grid;place-items:center;color:#03110E;font-weight:700}
 .nav-links{display:flex;align-items:center;gap:1.6rem;font-size:.92rem;color:var(--fg-muted)}
@@ -971,7 +971,7 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
   if(!window.THREE) return;
   const canvas=document.getElementById('bg-canvas');
   const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.25));
   renderer.setSize(innerWidth,innerHeight);
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,1000);
@@ -1016,9 +1016,11 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
     progress=max>0?Math.min(1,y/max):0;
   });
   const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var _fr=0;
   function animate(){
     requestAnimationFrame(animate);
     if(document.hidden||document.body.style.overflow==='hidden'){return;}
+    if(_fr++&1){return;}
     if(!reduced){
       const boost=1+progress*3;                       // deeper = faster
       const v=Math.min(Math.abs(vel)*0.0006,0.04);    // scroll velocity kick
@@ -1083,13 +1085,13 @@ if(window.gsap&&window.ScrollTrigger){
   gsap.utils.toArray('.reveal').forEach(function(el){
     if(el.parentElement && el.parentElement.classList.contains('grid'))return;
     if(SMALL){gsap.set(el,{opacity:1,y:0,rotateX:0});return;}
-    gsap.fromTo(el,{opacity:0,y:44,filter:'blur(12px)',rotateX:RM?0:-12,transformPerspective:820},{opacity:1,y:0,filter:'blur(0px)',rotateX:0,duration:.85,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none reverse'}});
+    gsap.fromTo(el,{opacity:0,y:44,filter:'blur(6px)',rotateX:RM?0:-10,transformPerspective:820},{opacity:1,y:0,filter:'blur(0px)',rotateX:0,duration:.85,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none reverse'}});
   });
 
   // feature cards: staggered 3D fan-in
   gsap.utils.toArray('#features .grid').forEach(function(g){
     if(SMALL){gsap.set(g.children,{opacity:1,y:0,rotateY:0});return;}
-    gsap.from(g.children,{opacity:0,y:56,filter:'blur(10px)',rotateY:RM?0:20,transformPerspective:900,transformOrigin:'left center',duration:.85,stagger:.09,ease:'power3.out',scrollTrigger:{trigger:g,start:'top 82%'}});
+    gsap.from(g.children,{opacity:0,y:56,filter:'blur(5px)',rotateY:RM?0:16,transformPerspective:900,transformOrigin:'left center',duration:.85,stagger:.09,ease:'power3.out',scrollTrigger:{trigger:g,start:'top 82%'}});
   });
 
   // hero parallax + Calpus spins as you scroll away
@@ -1910,7 +1912,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.o
 // trionn-style momentum smooth scroll
 (function initLenis(){
   if(!window.Lenis || matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-  var lenis=new Lenis({lerp:0.085,wheelMultiplier:1,smoothWheel:true,touchMultiplier:1.4});
+  var lenis=new Lenis({lerp:0.12,wheelMultiplier:1,smoothWheel:true,touchMultiplier:1.4});
   if(window.gsap&&window.ScrollTrigger){
     lenis.on('scroll',ScrollTrigger.update);
     gsap.ticker.add(function(t){lenis.raf(t*1000);});
