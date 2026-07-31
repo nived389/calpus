@@ -376,6 +376,9 @@ th{color:var(--fg-muted);font-weight:500;font-size:.78rem;text-transform:upperca
 .tg{width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.12);position:relative;transition:.2s;flex-shrink:0;cursor:pointer}
 .tg::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s}
 .tg.on{background:var(--teal-500)}.tg.on::after{left:21px}
+.tb-row{display:flex;justify-content:space-between;align-items:center;gap:.8rem;padding:.85rem;border:1px solid var(--glass-border);border-radius:12px;margin-bottom:.6rem;background:var(--panel)}
+.tb-row small{color:var(--fg-muted);font-size:.78rem}
+.tb-empty{color:var(--fg-muted);font-size:.88rem;padding:.8rem;text-align:center;border:1px dashed var(--glass-border);border-radius:12px}
 @media(max-width:820px){.admin-body{grid-template-columns:1fr}.ppt-body{grid-template-columns:1fr}}
 
 footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem);text-align:center;color:var(--fg-muted);font-size:.9rem;position:relative;z-index:2}
@@ -731,6 +734,20 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
   </div>
 </div>
 
+<!-- TEXTBOOK LIBRARY -->
+<div class="overlay" id="textbook-overlay">
+  <div class="modal glass modal-pos" style="max-width:520px">
+    <button class="x" onclick="closeOverlay('textbook-overlay')">×</button>
+    <h2>📕 Textbook library</h2>
+    <p class="sub">Pick your department &amp; semester to download the Calpus textbook PDF (with watermark). More subjects are being uploaded.</p>
+    <div class="two-col">
+      <div class="field"><label>Department</label><select id="tb-dept" onchange="renderTextbooks()"></select></div>
+      <div class="field"><label>Semester</label><select id="tb-sem" onchange="renderTextbooks()"><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div>
+    </div>
+    <div id="tb-list" style="margin-top:.4rem"></div>
+  </div>
+</div>
+
 <!-- PROFILE -->
 <div class="overlay" id="profile-overlay">
   <div class="modal glass modal-pos" style="max-width:440px">
@@ -795,6 +812,7 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
         <button class="side-btn" onclick="openPPT('Warehousing')">🖼 Make a presentation</button>
         <button class="side-btn" onclick="quickAsk('Generate marks-wise questions on Fleet Management')">📝 Marks-wise Q&amp;A</button>
         <button class="side-btn" onclick="quickAsk('Predict my next exam questions')">📈 Exam Radar</button>
+        <button class="side-btn" onclick="openTextbooks()">📕 Textbooks</button>
         <button class="side-btn" onclick="openProfile()">👤 My profile</button>
         <div id="mem-box" style="margin-top:.6rem;font-size:.76rem;color:var(--fg-muted);line-height:1.4"></div>
         <button class="side-btn" style="margin-top:.4rem" onclick="logout()">🔒 Log out (free this device)</button>
@@ -1847,6 +1865,31 @@ function toggleDemo(){demoPlaying=!demoPlaying;var p=document.getElementById('vf
 var PROFILE={name:'Aarav Krishnan',phone:'+91 98470 11223',email:'aarav@gmail.com',university:'University of Calicut',course:'BBA',sem:'Sem 3'};
 function loadProfile(){try{var v=JSON.parse(localStorage.getItem('calpus_profile')||'null');if(v)PROFILE=Object.assign(PROFILE,v);}catch(e){}applyProfileSidebar();}
 function applyProfileSidebar(){var n=document.getElementById('side-name');if(n)n.textContent=PROFILE.name;var sub=document.getElementById('side-sub');if(sub)sub.textContent=PROFILE.course+' · '+PROFILE.sem+' · Trial';var av=document.getElementById('side-av');if(av)av.textContent=(PROFILE.name||'S').charAt(0).toUpperCase();}
+var TEXTBOOKS={
+  'B.Com':{'Sem 3':[{s:'Travel Formalities & Documentation',f:'textbooks/travel-formalities-documentation.pdf'}]},
+  'BBA':{'Sem 3':[{s:'Domestic Logistics Management',f:'textbooks/domestic-logistics-management.pdf'}]}
+};
+var TB_DEPTS=['B.Com','BBA','BSc Computer Science','BA English','BSc Physics','BSc Mathematics','BCA','BA Economics','BBA LLB'];
+function openTextbooks(){
+  var d=document.getElementById('tb-dept');
+  if(!d.options.length) d.innerHTML=TB_DEPTS.map(function(x){return '<option>'+x+'</option>';}).join('');
+  // default to the student's profile if we have it
+  try{ if(typeof PROFILE==='object'){
+    var c=(PROFILE.course||'').toLowerCase();
+    var match=TB_DEPTS.find(function(x){return c.indexOf(x.toLowerCase())>=0;})||(c.indexOf('com')>=0?'B.Com':(c.indexOf('bba')>=0?'BBA':null));
+    if(match) d.value=match;
+    if(PROFILE.sem) document.getElementById('tb-sem').value=PROFILE.sem;
+  }}catch(e){}
+  renderTextbooks(); open('textbook-overlay');
+}
+function renderTextbooks(){
+  var dept=document.getElementById('tb-dept').value, sem=document.getElementById('tb-sem').value;
+  var list=(TEXTBOOKS[dept]&&TEXTBOOKS[dept][sem])||[];
+  var el=document.getElementById('tb-list');
+  if(!list.length){el.innerHTML='<div class="tb-empty">📚 Textbooks for <b>'+dept+' · '+sem+'</b> are being uploaded soon.</div>';return;}
+  el.innerHTML=list.map(function(t){return '<div class="tb-row"><div><b>'+t.s+'</b><br><small>'+dept+' · '+sem+' · Calpus watermark</small></div><a class="btn btn-primary btn-sm" href="'+t.f+'" download>⭳ Download</a></div>';}).join('')
+    +'<div class="tb-empty" style="margin-top:.5rem">More subjects for this semester coming soon.</div>';
+}
 function openProfile(){loadProfile();
   document.getElementById('pf-name').value=PROFILE.name;document.getElementById('pf-phone').value=PROFILE.phone;document.getElementById('pf-email').value=PROFILE.email;
   document.getElementById('pf-university').value=PROFILE.university;document.getElementById('pf-course').value=PROFILE.course;document.getElementById('pf-sem').value=PROFILE.sem;
