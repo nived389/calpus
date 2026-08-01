@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
@@ -1297,15 +1298,40 @@ function answerAnyway(enc){
   setTimeout(()=>{t.remove();streamMsg('(Outside your syllabus — answering as you asked.)\n\n'+text,src||'general knowledge (not from your syllabus)',ppt)},1000);
 }
 function streamMsg(text,src,ppt){
-  const d=addMsg('','bot');const body=document.createElement('span');
+  const d=addMsg('','bot');d._answer=text;const body=document.createElement('span');
   d.innerHTML='<div class="mini-av">✦ Calpus</div>';d.appendChild(body);
   let i=0;const iv=setInterval(()=>{
-    body.textContent=text.slice(0,i+=4);chat.scrollTop=chat.scrollHeight;
+    body.textContent=text.slice(0,i+=9);chat.scrollTop=chat.scrollHeight;
     if(i>=text.length){clearInterval(iv);speakOut(text);
       if(src){const s=document.createElement('div');s.className='src';s.textContent=(CUR_LANG==='ml'?'📚 ആധാരം: ':'📚 Referenced: ')+src;d.appendChild(s)}
-      if(ppt){const r=document.createElement('div');r.className='row-act';r.innerHTML=`<button class="btn btn-accent btn-sm" onclick="openPPT('${ppt}')">🖼 Make editable slides</button>`;d.appendChild(r)}
+      const r=document.createElement('div');r.className='row-act';
+      var pdfBtn=document.createElement('button');pdfBtn.className='btn btn-ghost btn-sm';pdfBtn.textContent='⭳ Save as PDF';pdfBtn.onclick=function(){answerPDF(pdfBtn);};r.appendChild(pdfBtn);
+      if(ppt){var pb=document.createElement('button');pb.className='btn btn-accent btn-sm';pb.textContent='🖼 Make editable slides';pb.onclick=function(){openPPT(ppt);};r.appendChild(pb);}
+      d.appendChild(r);
     }
   },14);
+}
+function answerPDF(btnEl){var m=btnEl.closest('.msg');var t=(m&&m._answer)||(m?m.innerText.replace(/^✦ Calpus/,''):'');makeAnswerPDF(t);}
+function makeAnswerPDF(bodyText){
+  if(!(window.jspdf&&window.jspdf.jsPDF)){toast('PDF engine still loading — try again in a moment.');return;}
+  var clean=(bodyText||'').replace(/[▸➤]/g,'> ').replace(/[•]/g,'- ').replace(/[^\x09\x0A\x20-\x7E]/g,'');
+  var title=(clean.split('\n').find(function(l){return l.trim();})||'Calpus notes').slice(0,60);
+  var doc=new jspdf.jsPDF({unit:'pt',format:'a4'});
+  var W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=48,maxw=W-M*2,y=88;
+  function frame(){
+    doc.setTextColor(205,228,222);doc.setFontSize(66);doc.text('CALPUS',W/2,H/2,{angle:35,align:'center'});
+    doc.setDrawColor(215);doc.line(M,H-40,W-M,H-40);
+    doc.setTextColor(13,148,136);doc.setFontSize(9);doc.text('Calpus  -  AI Study Companion',M,H-24);
+    doc.setTextColor(150);doc.text('calpus answer',W-M,H-24,{align:'right'});
+  }
+  frame();
+  doc.setTextColor(13,148,136);doc.setFont(undefined,'bold');doc.setFontSize(15);
+  doc.text(doc.splitTextToSize(title,maxw),M,54);
+  doc.setFont(undefined,'normal');doc.setTextColor(30,41,37);doc.setFontSize(11);
+  var lines=doc.splitTextToSize(clean,maxw);
+  for(var i=0;i<lines.length;i++){ if(y>H-58){doc.addPage();frame();y=58;} doc.text(lines[i],M,y);y+=15.5; }
+  doc.save((title.replace(/[^a-z0-9]+/gi,'_').slice(0,40)||'calpus_notes')+'.pdf');
+  toast('Saved as PDF with Calpus watermark ✦');
 }
 // Small knowledge map so marks-wise ANSWERS scale with the weightage.
 // BACKEND: this comes from RAG over your uploaded material.
@@ -1867,7 +1893,7 @@ function loadProfile(){try{var v=JSON.parse(localStorage.getItem('calpus_profile
 function applyProfileSidebar(){var n=document.getElementById('side-name');if(n)n.textContent=PROFILE.name;var sub=document.getElementById('side-sub');if(sub)sub.textContent=PROFILE.course+' · '+PROFILE.sem+' · Trial';var av=document.getElementById('side-av');if(av)av.textContent=(PROFILE.name||'S').charAt(0).toUpperCase();}
 var TEXTBOOKS={
   'B.Com':{'Sem 3':[{s:'Travel Formalities & Documentation',f:'textbooks/travel-formalities-documentation.pdf'}]},
-  'BBA':{'Sem 3':[{s:'Domestic Logistics Management',f:'textbooks/domestic-logistics-management.pdf'}]}
+  'BBA':{'Sem 3':[{s:'Domestic Logistics Management',f:'textbooks/domestic-logistics-management.pdf'},{s:'Human Resource Management',f:'textbooks/human-resource-management.pdf'},{s:'Strategic Cost Analysis',f:'textbooks/strategic-cost-analysis.pdf'},{s:'Business and Corporate Regulations',f:'textbooks/business-corporate-regulations.pdf'},{s:'Skills for Employability',f:'textbooks/skills-for-employability.pdf'}]}
 };
 var TB_DEPTS=['B.Com','BBA','BSc Computer Science','BA English','BSc Physics','BSc Mathematics','BCA','BA Economics','BBA LLB'];
 function openTextbooks(){
