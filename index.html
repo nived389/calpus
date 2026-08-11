@@ -1761,7 +1761,7 @@ function exportLogins(){
 }
 
 // ---- team / co-workers ----
-let COWORKERS=[{user:'nxdnived',role:'Owner'}];
+let COWORKERS=[{user:'calpusstudentai',email:'calpusstudentai@gmail.com',role:'Owner'}];
 var ROLE_RANK={Owner:5,Admin:4,Editor:3,'Data Uploader':2,Support:1,Viewer:0};
 var ROLE_PERMS={Owner:'Full control — manage team, data, pricing, students, notifications.',Admin:'Manage data, students &amp; notifications; add/remove Editors and below.',Editor:'Edit content &amp; upload data for their area.','Data Uploader':'Upload/manage data files for their area only.',Support:'Handle student queries; read-only on data.',Viewer:'Read-only access.'};
 var CURRENT_ROLE=(localStorage.getItem('calpus_role')||'Owner');
@@ -1888,7 +1888,7 @@ function adminLogin(){
   var id=document.getElementById('admin-id').value.trim().toLowerCase();
   var code=document.getElementById('admin-code').value.trim();
   // BACKEND: verify server-side; never keep the password in client code
-  if(id==='nxdnived@gmail.com'&&code==='9207151732'){
+  if(id==='calpusstudentai@gmail.com'&&code==='9207151732'){
     CURRENT_ROLE='Owner';localStorage.setItem('calpus_admin','1');localStorage.setItem('calpus_role','Owner');
     closeOverlay('adminlogin-overlay');openAdminPanel();
   } else toast('Wrong email or password.');
@@ -1897,7 +1897,7 @@ function coworkerLogin(){
   loadTeam();
   var e=(document.getElementById('cw-login-email').value||'').trim().toLowerCase();
   if(!e||e.indexOf('@')<0){toast('Enter your work email.');return;}
-  if(e==='nxdnived@gmail.com'){toast('Owner logs in with email + password above — no OTP needed.');return;}
+  if(e==='calpusstudentai@gmail.com'){toast('Owner logs in with email + password above — no OTP needed.');return;}
   var member=COWORKERS.find(function(c){return (c.email||'').toLowerCase()===e;});
   if(!member){toast('This email is not a registered team member. Ask the owner to add you.');return;}
   closeOverlay('adminlogin-overlay');
