@@ -1699,6 +1699,22 @@ function exportPPT(){
    8) ADMIN — gated login + exportable student logins (CSV)
    ========================================================= */
 // ---- settings: single source of truth for price/trial/upi ----
+/* ===== Supabase cloud store (shared admin data, online) ===== */
+var SB_URL='https://kibyhnkgzbgbfgptzkay.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpYnlobmtnemJnYmZncHR6a2F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NjI2OTUsImV4cCI6MjEwMjAzODY5NX0.Isa0dERNtT8hxp2mzAznbrDuT7ztkW4OrfBDuj6AKPg';
+function _sbH(extra){var h={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};if(extra)for(var k in extra)h[k]=extra[k];return h;}
+async function cloudGet(key){try{var r=await fetch(SB_URL+'/rest/v1/kv?key=eq.'+encodeURIComponent(key)+'&select=value',{headers:_sbH()});if(r.ok){var d=await r.json();return (d&&d[0])?d[0].value:null;}}catch(e){}return null;}
+function cloudSet(key,value){try{fetch(SB_URL+'/rest/v1/kv',{method:'POST',headers:_sbH({'Prefer':'resolution=merge-duplicates'}),body:JSON.stringify({key:key,value:value})});}catch(e){}}
+async function cloudPull(){
+  try{
+    var pairs=await Promise.all(['settings','team','notifs','files'].map(function(k){return cloudGet(k).then(function(v){return [k,v];});}));
+    pairs.forEach(function(p){ if(p[1]!=null){ try{localStorage.setItem('calpus_'+p[0],JSON.stringify(p[1]));}catch(e){} } });
+    if(typeof loadSettings==='function'){loadSettings();applyPrice();}
+    if(typeof buildNotifList==='function'){buildNotifList();}
+    if(typeof renderStudentNotifs==='function'){renderStudentNotifs();}
+    if(typeof loadTeam==='function'){loadTeam();}
+  }catch(e){}
+}
 let SETTINGS={price:10,trial:2,upi:'niveddevan389-1@okicici',offer:''};
 function _set(id,txt){var e=document.getElementById(id);if(e)e.textContent=txt;}
 function applyPrice(){
@@ -1720,7 +1736,7 @@ function saveSettings(){
   SETTINGS.trial=Math.max(0,parseInt(document.getElementById('trial-input').value)||2);
   SETTINGS.upi=document.getElementById('upi-input').value.trim()||SETTINGS.upi;
   SETTINGS.offer=document.getElementById('offer-input').value.trim();
-  localStorage.setItem('calpus_settings',JSON.stringify(SETTINGS));
+  localStorage.setItem('calpus_settings',JSON.stringify(SETTINGS));cloudSet('settings',SETTINGS);
   applyPrice();
   toast('Saved — ₹'+SETTINGS.price+'/month applied to every price on the site.');
 }
@@ -1777,7 +1793,7 @@ function addCoworker(){
   document.getElementById('cw-user').value='';document.getElementById('cw-pass').value='';document.getElementById('cw-email').value='';
   buildTeamTable();toast('Co-worker "'+u+'" ('+r+') added for '+area+'. Logs in with '+em+' + OTP.');
 }
-function saveTeam(){try{localStorage.setItem('calpus_team',JSON.stringify(COWORKERS));}catch(e){}}
+function saveTeam(){try{localStorage.setItem('calpus_team',JSON.stringify(COWORKERS));}catch(e){}cloudSet('team',COWORKERS);}
 function loadTeam(){try{var v=JSON.parse(localStorage.getItem('calpus_team')||'null');if(v&&v.length)COWORKERS=v;}catch(e){}}
 function delCoworker(i){COWORKERS.splice(i,1);saveTeam();buildTeamTable();}
 function buildTeamTable(){
@@ -1795,7 +1811,7 @@ function buildTeamTable(){
 // ---- data files (the database) — persists so future uploads accumulate ----
 function loadFiles(){try{var v=JSON.parse(localStorage.getItem('calpus_files')||'null');return v||[{name:'Calpus - Domestic Logistics KB.pdf',size:'0.06 MB'},{name:'Syllabus - BBA3CJ202.pdf',size:'0.02 MB'}];}catch(e){return[];}}
 let DATA_FILES=loadFiles();
-function saveFiles(){localStorage.setItem('calpus_files',JSON.stringify(DATA_FILES));}
+function saveFiles(){localStorage.setItem('calpus_files',JSON.stringify(DATA_FILES));cloudSet('files',DATA_FILES);}
 function onFilesSelected(inp){
   for(var i=0;i<inp.files.length;i++){var f=inp.files[i];DATA_FILES.push({name:f.name,size:(f.size/1048576).toFixed(2)+' MB'});}
   var n=inp.files.length;inp.value='';saveFiles();buildFilesList();
@@ -1828,7 +1844,7 @@ function buildFilesList(){
 
 // ---- notifications (shown after login for N days) ----
 function loadNotifs(){try{return JSON.parse(localStorage.getItem('calpus_notifs')||'[]');}catch(e){return[];}}
-function saveNotifs(a){localStorage.setItem('calpus_notifs',JSON.stringify(a));}
+function saveNotifs(a){localStorage.setItem('calpus_notifs',JSON.stringify(a));cloudSet('notifs',a);}
 function addNotif(){
   var txt=document.getElementById('notif-text').value.trim(),d=Math.max(1,parseInt(document.getElementById('notif-days').value)||1);
   if(!txt){toast('Write a notification first.');return;}
@@ -2045,7 +2061,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.o
   document.querySelectorAll('.overlay').forEach(function(o){o.setAttribute('data-lenis-prevent','');});
   document.querySelectorAll('a[href^="#"]').forEach(function(a){a.addEventListener('click',function(e){var id=a.getAttribute('href');if(id.length>1){var el=document.querySelector(id);if(el){e.preventDefault();lenis.scrollTo(el,{offset:-70});}}});});
 })();
-loadSettings();applyPrice();buildNotifList();
+loadSettings();applyPrice();buildNotifList();cloudPull();
 if(window.speechSynthesis)speechSynthesis.onvoiceschanged=function(){};
 </script>
 </body>
