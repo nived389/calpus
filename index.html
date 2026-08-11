@@ -1202,37 +1202,29 @@ var SERVER='http://localhost:8787';
 var _otp={email:'',cb:null,mode:'local',localCode:''};
 async function sendOTP(email,cb){
   if(!email||email.indexOf('@')<0){toast('Enter a valid email first.');return;}
-  _otp={email:email,cb:cb,mode:'local',localCode:''};
+  _otp={email:email,cb:cb};
   document.getElementById('otp-email').textContent=email;
   document.getElementById('otp-input').value='';
   open('otp-overlay');
+  toast('Sending code to '+email+'…');
   try{
-    // The SERVER generates, stores and emails the code (production-secure).
-    var r=await fetch(SERVER+'/api/request-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
-    if(r.ok){var d=await r.json();_otp.mode='server';
-      if(d.sent)toast('OTP sent to '+email+' ✦');
-      else toast('Demo mode — your OTP is '+d.demo);
-      return;
-    }
-  }catch(e){}
-  // server offline -> local demo fallback so the flow still works
-  _otp.mode='local';_otp.localCode=''+Math.floor(100000+Math.random()*900000);
-  toast('Offline demo — your OTP is '+_otp.localCode);
+    // Supabase generates + EMAILS the code. It is never shown on the site.
+    var r=await fetch(SB_URL+'/auth/v1/otp',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,create_user:true})});
+    if(r.ok){toast('Code emailed to '+email+' — check your inbox & spam ✦');}
+    else{var e=await r.json().catch(function(){return{};});toast('Could not send code: '+(e.msg||e.error_description||e.error||('error '+r.status)));}
+  }catch(e){toast('Could not reach the email service.');}
 }
 async function verifyOTP(){
   var v=(document.getElementById('otp-input').value||'').trim();
-  if(!v){toast('Enter the code.');return;}
-  if(_otp.mode==='server'){
-    try{
-      var r=await fetch(SERVER+'/api/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:_otp.email,code:v})});
-      var d=await r.json();
-      if(r.ok&&d.ok){otpDone();return;}
-      toast(d.error||'Wrong code.');return;
-    }catch(e){toast('Could not reach the server.');return;}
-  }
-  if(v===_otp.localCode){otpDone();}else toast('Wrong code. Try again.');
+  if(!v){toast('Enter the code from your email.');return;}
+  try{
+    var r=await fetch(SB_URL+'/auth/v1/verify',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({type:'email',email:_otp.email,token:v})});
+    var d=await r.json().catch(function(){return{};});
+    if(r.ok&&d.access_token){otpDone();return;}
+    toast(d.msg||d.error_description||d.error||'Wrong or expired code.');
+  }catch(e){toast('Verification failed — try again.');}
 }
-function otpDone(){closeOverlay('otp-overlay');var cb=_otp.cb;_otp={email:'',cb:null,mode:'local',localCode:''};if(cb)cb();}
+function otpDone(){closeOverlay('otp-overlay');var cb=_otp.cb;_otp={email:'',cb:null};if(cb)cb();}
 function resendOTP(){ if(_otp.email) sendOTP(_otp.email,_otp.cb); }
 function signupOTP(){ sendOTP((document.getElementById('su-email').value||'').trim(), openApp); }
 function loginOTP(){ sendOTP((document.getElementById('li-email').value||'').trim(), openApp); }
