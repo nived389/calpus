@@ -12,6 +12,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
@@ -230,6 +231,9 @@ svg.i{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 .modal-pos{position:relative}
 .switch-line{text-align:center;margin-top:1.2rem;font-size:.9rem;color:var(--fg-muted)}
 .switch-line b{color:var(--teal-300);cursor:pointer}
+.g-divider{display:flex;align-items:center;gap:.8rem;margin:1rem 0;color:var(--fg-muted);font-size:.78rem}
+.g-divider::before,.g-divider::after{content:"";flex:1;height:1px;background:var(--glass-border)}
+.g-signin{display:flex;justify-content:center;min-height:44px}
 
 /* ===== CHAT APP ===== */
 .app-shell{display:grid;grid-template-columns:230px 1fr;height:88vh}
@@ -437,7 +441,7 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
   <div class="hero">
     <div id="hero-copy">
       <span class="chip" style="margin-bottom:1.2rem">🎓 Built for Calicut University students</span>
-      <h1>Meet Calpus.<br><span class="grad">Your campus AI tutor.</span></h1>
+      <h1>Meet Calpus.<br><span class="grad">Your University study helper.</span></h1>
       <p class="lead">Calpus reads your notes and <b>5–6 years of Calicut University question papers</b>, explains any topic with <b>marks-wise questions</b>, builds editable presentations, and predicts your next exam.</p>
       <div class="hero-cta">
         <button class="btn btn-primary" onclick="openAuth('signup')">Start 2-day free trial
@@ -590,6 +594,8 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
     <div id="view-login">
       <h2>Welcome back</h2>
       <p class="sub">Log in to continue studying with Calpus.</p>
+      <div class="g-signin" id="g-login"></div>
+      <div class="g-divider">or with email</div>
       <div class="field"><label>Email or Phone</label><input id="li-email" type="text" placeholder="you@gmail.com" /></div>
       <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
       <button class="btn btn-primary" style="width:100%" onclick="openApp()">Log in with password</button>
@@ -599,6 +605,8 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
     <div id="view-signup" style="display:none">
       <h2>Create your profile</h2>
       <p class="sub">Calpus uses this to give you <b>only</b> the material for your Calicut University course &amp; semester. Your 2-day free trial starts now.</p>
+      <div class="g-signin" id="g-signup"></div>
+      <div class="g-divider">or fill in your details</div>
       <div class="two-col">
         <div class="field"><label>Full name</label><input id="su-name" type="text" placeholder="Aarav Krishnan" /></div>
         <div class="field"><label>Phone number</label><input type="tel" placeholder="+91 98765 43210" /></div>
@@ -905,7 +913,12 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
     <div class="field"><label>Admin email</label><input id="admin-id" type="text" placeholder="you@gmail.com" /></div>
     <div class="field"><label>Password</label><input id="admin-code" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()" /></div>
     <button class="btn btn-primary" style="width:100%" onclick="adminLogin()">Enter console</button>
-    <p style="font-size:.75rem;color:var(--fg-muted);margin-top:1rem;text-align:center">Institution owner only. Access is remembered on this device.</p>
+    <div style="border-top:1px solid var(--glass-border);margin:1.1rem 0 .2rem;padding-top:1rem">
+      <p class="sub" style="margin-bottom:.6rem;font-size:.85rem">Team member? Log in with email + OTP:</p>
+      <div class="field"><input id="cw-login-email" type="email" placeholder="your work email" onkeydown="if(event.key==='Enter')coworkerLogin()" /></div>
+      <button class="btn btn-ghost" style="width:100%" onclick="coworkerLogin()">✉ Send OTP &amp; log in</button>
+    </div>
+    <p style="font-size:.72rem;color:var(--fg-muted);margin-top:.8rem;text-align:center">Owner: email + password · Team: email + OTP.</p>
   </div>
 </div>
 
@@ -946,9 +959,13 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
           <p style="font-size:.82rem;color:var(--fg-muted);margin-bottom:.6rem">Create a login for a co-worker and give them a role.</p>
           <div class="two-col"><div class="field" style="margin-bottom:.6rem"><input id="cw-user" type="text" placeholder="Username" /></div>
             <div class="field" style="margin-bottom:.6rem"><input id="cw-pass" type="text" placeholder="Password" /></div></div>
-          <div class="field" style="margin-bottom:.6rem"><select id="cw-role"><option>Admin</option><option>Editor</option><option>Data Uploader</option><option>Support</option><option>Viewer</option></select></div>
-          <button class="btn btn-primary btn-sm" style="width:100%" onclick="addCoworker()">+ Add co-worker</button>
+          <div class="field" style="margin-bottom:.6rem"><input id="cw-email" type="email" placeholder="Work email (used to log in with OTP)" /></div>
+          <div class="two-col"><div class="field" style="margin-bottom:.6rem"><label style="font-size:.72rem">Role</label><select id="cw-role"><option>Admin</option><option>Editor</option><option>Data Uploader</option><option>Support</option><option>Viewer</option></select></div>
+            <div class="field" style="margin-bottom:.6rem"><label style="font-size:.72rem">Area they manage</label><select id="cw-area"><option>All departments</option><option>BBA</option><option>B.Com</option><option>BSc Computer Science</option><option>BA English</option><option>BSc Physics</option></select></div></div>
+          <div id="cw-form"><button class="btn btn-primary btn-sm" style="width:100%" onclick="addCoworker()">+ Add co-worker</button></div>
+          <div id="cw-noperm" style="display:none;font-size:.82rem;color:var(--fg-muted)">Your role can view the team but not add or remove members.</div>
           <table id="team-table" style="margin-top:1rem"></table>
+          <div id="team-perms" style="margin-top:.9rem;font-size:.75rem;color:var(--fg-muted);line-height:1.55"></div>
         </div>
         <div class="panel-box">
           <h3>🏷 Subscription &amp; pricing</h3>
@@ -1152,6 +1169,34 @@ function startSlides(){buildCS();clearInterval(_csT);_csI=0;
     if(!sl.length)return;sl[_csI].classList.remove('on');dt[_csI].classList.remove('on');
     _csI=(_csI+1)%sl.length;sl[_csI].classList.add('on');dt[_csI].classList.add('on');
   },3200);}
+// ---- Google Sign-In (login with Google mail) ----
+// Paste your Google OAuth Client ID here (create one free at console.cloud.google.com).
+var GOOGLE_CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+function _decodeJwt(t){try{var p=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(p).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join('')));}catch(e){return null;}}
+function onGoogleCredential(resp){
+  var info=_decodeJwt(resp&&resp.credential);
+  if(!info||!info.email){toast('Google sign-in failed. Try again.');return;}
+  try{ if(typeof PROFILE==='object'){PROFILE.name=info.name||PROFILE.name;PROFILE.email=info.email;localStorage.setItem('calpus_profile',JSON.stringify(PROFILE));} }catch(e){}
+  try{ if(typeof MEMORY==='object'&&MEMORY)MEMORY.name=(info.given_name||info.name||'').split(' ')[0]; }catch(e){}
+  var nm=document.getElementById('su-name'); if(nm&&info.name)nm.value=info.name;
+  closeOverlay('auth-overlay');
+  toast('Signed in as '+info.email+' \u2726');
+  openApp();
+}
+function initGoogle(){
+  if(!(window.google&&google.accounts&&google.accounts.id))return;
+  var notConfigured=GOOGLE_CLIENT_ID.indexOf('YOUR_')===0;
+  if(notConfigured){
+    document.querySelectorAll('.g-signin').forEach(function(d){d.innerHTML='<button class="btn btn-ghost" style="width:100%" onclick="toast(\'Add your Google Client ID in index.html to enable Google login.\')"><svg class="i" viewBox="0 0 24 24" style="width:18px"><path d="M12 11v3h5a5 5 0 1 1-1.5-5"/></svg> Continue with Google</button>';});
+    return;
+  }
+  try{
+    google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:onGoogleCredential});
+    document.querySelectorAll('.g-signin').forEach(function(d){d.innerHTML=''; google.accounts.id.renderButton(d,{theme:'filled_black',size:'large',text:'continue_with',shape:'pill',width:300});});
+  }catch(e){}
+}
+(function(){var n=0;(function w(){ if(window.google&&google.accounts&&google.accounts.id){initGoogle();} else if(n++<40){setTimeout(w,150);} })();})();
+
 // ---- Email OTP for signup + login ----
 var SERVER='http://localhost:8787';
 var _otp={email:'',cb:null,mode:'local',localCode:''};
@@ -1208,7 +1253,7 @@ setInterval(()=>{ if(document.getElementById('app-overlay').classList.contains('
 // if another tab on this device claims the session, close this one
 addEventListener('storage',e=>{ if(e.key==='calpus_session' && document.getElementById('app-overlay').classList.contains('open')){ const s=sessionAlive(); if(s && s.tab!==MY_TAB){ closeOverlay('app-overlay'); toast('Signed out — your account was opened on another tab/device.'); } } });
 addEventListener('beforeunload',()=>{ const s=sessionAlive(); if(s && s.tab===MY_TAB) localStorage.removeItem('calpus_session'); });
-function openAdmin(){ if(localStorage.getItem('calpus_admin')==='1'){ openAdminPanel(); } else { open('adminlogin-overlay'); } }
+function openAdmin(){ if(localStorage.getItem('calpus_admin')==='1'){ CURRENT_ROLE=localStorage.getItem('calpus_role')||'Owner'; openAdminPanel(); } else { open('adminlogin-overlay'); } }
 
 /* =========================================================
    4) PAYMENT — UPI deep link (one-time). Autopay = README.
@@ -1709,19 +1754,42 @@ function exportLogins(){
 
 // ---- team / co-workers ----
 let COWORKERS=[{user:'nxdnived',role:'Owner'}];
-function addCoworker(){
-  var u=document.getElementById('cw-user').value.trim(),p=document.getElementById('cw-pass').value.trim(),r=document.getElementById('cw-role').value;
-  if(!u||!p){toast('Enter a username and password.');return;}
-  COWORKERS.push({user:u,role:r});
-  document.getElementById('cw-user').value='';document.getElementById('cw-pass').value='';
-  buildTeamTable();toast('Co-worker "'+u+'" created as '+r+'.');
+var ROLE_RANK={Owner:5,Admin:4,Editor:3,'Data Uploader':2,Support:1,Viewer:0};
+var ROLE_PERMS={Owner:'Full control — manage team, data, pricing, students, notifications.',Admin:'Manage data, students &amp; notifications; add/remove Editors and below.',Editor:'Edit content &amp; upload data for their area.','Data Uploader':'Upload/manage data files for their area only.',Support:'Handle student queries; read-only on data.',Viewer:'Read-only access.'};
+var CURRENT_ROLE=(localStorage.getItem('calpus_role')||'Owner');
+function myRank(){return ROLE_RANK[CURRENT_ROLE]!=null?ROLE_RANK[CURRENT_ROLE]:0;}
+function canManageTeam(){return myRank()>=ROLE_RANK.Admin;}
+function renderTeamPerms(){
+  var el=document.getElementById('team-perms');
+  if(el){ el.innerHTML='<b style="color:var(--teal-300)">Who controls whom</b> — higher roles manage lower ones. You are logged in as <b>'+CURRENT_ROLE+'</b>.<br>Owner &gt; Admin &gt; Editor &gt; Data Uploader &gt; Support &gt; Viewer<br><br>'
+    +Object.keys(ROLE_PERMS).map(function(r){return '<b>'+r+'</b> — '+ROLE_PERMS[r];}).join('<br>'); }
+  var f=document.getElementById('cw-form'),np=document.getElementById('cw-noperm'),can=canManageTeam();
+  if(f)f.style.display=can?'block':'none'; if(np)np.style.display=can?'none':'block';
 }
-function delCoworker(i){COWORKERS.splice(i,1);buildTeamTable();}
+function addCoworker(){
+  if(!canManageTeam()){toast('Your role cannot add team members.');return;}
+  var u=document.getElementById('cw-user').value.trim(),p=document.getElementById('cw-pass').value.trim(),r=document.getElementById('cw-role').value,em=document.getElementById('cw-email').value.trim(),area=document.getElementById('cw-area').value;
+  if(!u||!p){toast('Enter a username and password.');return;}
+  if(!em||em.indexOf('@')<0){toast('Enter a valid work email — they log in with email + OTP.');return;}
+  if(ROLE_RANK[r]>=myRank()){toast('You can only add roles below your own ('+CURRENT_ROLE+').');return;}
+  COWORKERS.push({user:u,email:em,role:r,area:area});
+  saveTeam();
+  document.getElementById('cw-user').value='';document.getElementById('cw-pass').value='';document.getElementById('cw-email').value='';
+  buildTeamTable();toast('Co-worker "'+u+'" ('+r+') added for '+area+'. Logs in with '+em+' + OTP.');
+}
+function saveTeam(){try{localStorage.setItem('calpus_team',JSON.stringify(COWORKERS));}catch(e){}}
+function loadTeam(){try{var v=JSON.parse(localStorage.getItem('calpus_team')||'null');if(v&&v.length)COWORKERS=v;}catch(e){}}
+function delCoworker(i){COWORKERS.splice(i,1);saveTeam();buildTeamTable();}
 function buildTeamTable(){
   var t=document.getElementById('team-table');if(!t)return;
-  t.innerHTML='<tr><th>Username</th><th>Role</th><th></th></tr>'+COWORKERS.map(function(c,i){
-    return '<tr><td>'+c.user+'</td><td><span class="badge trial">'+c.role+'</span></td><td>'+(c.role==='Owner'?'':'<span style="color:var(--destructive);cursor:pointer" onclick="delCoworker('+i+')">remove</span>')+'</td></tr>';
+  t.innerHTML='<tr><th>Member</th><th>Role</th><th>Area</th><th></th></tr>'+COWORKERS.map(function(c,i){
+    var canRemove=canManageTeam() && c.role!=='Owner' && ROLE_RANK[c.role]<myRank();
+    return '<tr><td>'+c.user+(c.email?'<br><small style="color:var(--fg-muted)">'+c.email+'</small>':'')+'</td>'
+      +'<td><span class="badge trial">'+c.role+'</span></td>'
+      +'<td><small>'+(c.area||'All')+'</small></td>'
+      +'<td>'+(canRemove?'<span style="color:var(--destructive);cursor:pointer" onclick="delCoworker('+i+')">remove</span>':'')+'</td></tr>';
   }).join('');
+  renderTeamPerms();
 }
 
 // ---- data files (the database) — persists so future uploads accumulate ----
@@ -1813,12 +1881,22 @@ function adminLogin(){
   var code=document.getElementById('admin-code').value.trim();
   // BACKEND: verify server-side; never keep the password in client code
   if(id==='nxdnived@gmail.com'&&code==='9207151732'){
-    localStorage.setItem('calpus_admin','1');
+    CURRENT_ROLE='Owner';localStorage.setItem('calpus_admin','1');localStorage.setItem('calpus_role','Owner');
     closeOverlay('adminlogin-overlay');openAdminPanel();
   } else toast('Wrong email or password.');
 }
+function coworkerLogin(){
+  loadTeam();
+  var e=(document.getElementById('cw-login-email').value||'').trim().toLowerCase();
+  if(!e||e.indexOf('@')<0){toast('Enter your work email.');return;}
+  if(e==='nxdnived@gmail.com'){toast('Owner logs in with email + password above — no OTP needed.');return;}
+  var member=COWORKERS.find(function(c){return (c.email||'').toLowerCase()===e;});
+  if(!member){toast('This email is not a registered team member. Ask the owner to add you.');return;}
+  closeOverlay('adminlogin-overlay');
+  sendOTP(e, function(){ CURRENT_ROLE=member.role; localStorage.setItem('calpus_admin','1'); localStorage.setItem('calpus_role',CURRENT_ROLE); openAdminPanel(); toast('Logged in as '+member.role+' ✦'); });
+}
 function openAdminPanel(){
-  loadSettings();applyPrice();buildLoginsTable();buildTeamTable();buildFilesList();buildNotifList();
+  loadTeam();loadSettings();applyPrice();buildLoginsTable();buildTeamTable();buildFilesList();buildNotifList();
   open('admin-overlay');
 }
 function adminLogout(){localStorage.removeItem('calpus_admin');closeOverlay('admin-overlay');toast('Admin logged out on this device.');}
