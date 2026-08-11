@@ -1171,7 +1171,7 @@ function startSlides(){buildCS();clearInterval(_csT);_csI=0;
   },3200);}
 // ---- Google Sign-In (login with Google mail) ----
 // Paste your Google OAuth Client ID here (create one free at console.cloud.google.com).
-var GOOGLE_CLIENT_ID='YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+var GOOGLE_CLIENT_ID='873897829871-afb1g0i29ap6krahemlc435kkphc0ffp.apps.googleusercontent.com';
 function _decodeJwt(t){try{var p=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(p).split('').map(function(c){return '%'+('00'+c.charCodeAt(0).toString(16)).slice(-2);}).join('')));}catch(e){return null;}}
 function onGoogleCredential(resp){
   var info=_decodeJwt(resp&&resp.credential);
