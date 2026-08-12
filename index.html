@@ -597,8 +597,8 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
       <div class="g-signin" id="g-login"></div>
       <div class="g-divider">or with email</div>
       <div class="field"><label>Email or Phone</label><input id="li-email" type="text" placeholder="you@gmail.com" /></div>
-      <div class="field"><label>Password</label><input type="password" placeholder="••••••••" /></div>
-      <button class="btn btn-primary" style="width:100%" onclick="openApp()">Log in with password</button>
+      <div class="field"><label>Password</label><input id="li-pass" type="password" placeholder="••••••••" /></div>
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Log in</button>
       <button class="btn btn-ghost" style="width:100%;margin-top:.6rem" onclick="loginOTP()">✉ Log in with email OTP</button>
       <p class="switch-line">New here? <b onclick="switchAuth('signup')">Start your 2-day free trial</b></p>
     </div>
@@ -720,8 +720,8 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
         <div class="field"><label>Semester</label>
           <select><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div>
       </div>
-      <div class="field"><label>Set a password</label><input type="password" placeholder="Create a password" /></div>
-      <button class="btn btn-primary" style="width:100%" onclick="signupOTP()">✉ Verify email &amp; start free trial</button>
+      <div class="field"><label>Set a password</label><input id="su-pass" type="password" placeholder="Create a password (min 6 chars)" /></div>
+      <button class="btn btn-primary" style="width:100%" onclick="doSignup()">Create account &amp; start free trial</button>
       <p class="switch-line">Already have an account? <b onclick="switchAuth('login')">Log in</b></p>
     </div>
   </div>
@@ -1218,7 +1218,7 @@ async function verifyOTP(){
   var v=(document.getElementById('otp-input').value||'').trim();
   if(!v){toast('Enter the code from your email.');return;}
   try{
-    var r=await fetch(SB_URL+'/auth/v1/verify',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({type:'email',email:_otp.email,token:v})});
+    var r=await fetch(SB_URL+'/auth/v1/verify',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({type:(_otp.type||'email'),email:_otp.email,token:v})});
     var d=await r.json().catch(function(){return{};});
     if(r.ok&&d.access_token){otpDone();return;}
     toast(d.msg||d.error_description||d.error||'Wrong or expired code.');
@@ -1226,7 +1226,45 @@ async function verifyOTP(){
 }
 function otpDone(){closeOverlay('otp-overlay');var cb=_otp.cb;_otp={email:'',cb:null};if(cb)cb();}
 function resendOTP(){ if(_otp.email) sendOTP(_otp.email,_otp.cb); }
-function signupOTP(){ sendOTP((document.getElementById('su-email').value||'').trim(), openApp); }
+function _afterAuth(email,name){
+  try{ if(typeof PROFILE==='object'){PROFILE.email=email; if(name)PROFILE.name=name; localStorage.setItem('calpus_profile',JSON.stringify(PROFILE)); if(typeof applyProfileSidebar==='function')applyProfileSidebar();} }catch(e){}
+  try{ if(typeof MEMORY==='object'&&MEMORY&&name)MEMORY.name=name.split(' ')[0]; }catch(e){}
+  closeOverlay('otp-overlay'); closeOverlay('auth-overlay');
+  toast('Welcome'+(name?', '+name.split(' ')[0]:'')+' \u2726');
+  openApp();
+}
+async function doSignup(){
+  var email=(document.getElementById('su-email').value||'').trim();
+  var pass=(document.getElementById('su-pass').value||'');
+  var name=(document.getElementById('su-name').value||'').trim();
+  if(!email||email.indexOf('@')<0){toast('Enter a valid email.');return;}
+  if(!pass||pass.length<6){toast('Password must be at least 6 characters.');return;}
+  toast('Creating your account…');
+  try{
+    var r=await fetch(SB_URL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pass,data:{name:name}})});
+    var d=await r.json().catch(function(){return{};});
+    if(!r.ok){toast(d.msg||d.error_description||d.error||'Could not create account.');return;}
+    if(d.access_token){ _afterAuth(email,name); return; }
+    _otp={email:email,cb:function(){_afterAuth(email,name);},type:'signup'};
+    document.getElementById('otp-email').textContent=email;
+    document.getElementById('otp-input').value='';
+    open('otp-overlay');
+    toast('Account created — enter the code we emailed to '+email);
+  }catch(e){toast('Network error — try again.');}
+}
+async function doLogin(){
+  var email=(document.getElementById('li-email').value||'').trim();
+  var pass=(document.getElementById('li-pass').value||'');
+  if(!email||!pass){toast('Enter your email and password.');return;}
+  toast('Logging in…');
+  try{
+    var r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pass})});
+    var d=await r.json().catch(function(){return{};});
+    if(r.ok&&d.access_token){ var nm=(d.user&&d.user.user_metadata&&d.user.user_metadata.name)||''; _afterAuth(email,nm); return; }
+    if((d.error_code||'').indexOf('not_confirmed')>=0 || (d.msg||'').toLowerCase().indexOf('not confirmed')>=0){ toast('Please verify your email first — check your inbox for the code.'); return; }
+    toast('Wrong email or password.');
+  }catch(e){toast('Network error — try again.');}
+}
 function loginOTP(){ sendOTP((document.getElementById('li-email').value||'').trim(), openApp); }
 function openApp(){ if(!claimSession()){ showSessionBlock(sessionAlive()); return; } closeOverlay('auth-overlay');open('app-overlay');loadMemory();var _nm=document.getElementById('su-name');if(_nm&&_nm.value.trim())MEMORY.name=_nm.value.trim().split(' ')[0];renderStudentNotifs();memoryGreeting();renderMemory();startSlides();loadProfile(); }
 function openPay(){open('pay-overlay')}
