@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -1067,6 +1067,8 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
    ========================================================= */
 (function initThree(){
   if(!window.THREE) return;
+  // Returning student (logged in < 2 days) goes straight to the app — don't spin up the 3D landing they won't see.
+  try{var _a=JSON.parse(localStorage.getItem('calpus_auth')||'null');if(_a&&_a.email&&Date.now()-(_a.ts||0)<172800000)return;}catch(e){}
   const canvas=document.getElementById('bg-canvas');
   const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.25));
@@ -1167,7 +1169,7 @@ function tilt3d(el){
   el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();var rx=((e.clientY-r.top)/r.height-.5)*-9, ry=((e.clientX-r.left)/r.width-.5)*11;el.style.transform='perspective(700px) rotateX('+rx+'deg) rotateY('+ry+'deg) translateY(-5px)';});
   el.addEventListener('mouseleave',function(){el.style.transform='';});
 }
-if(window.gsap&&window.ScrollTrigger){
+if(window.gsap&&window.ScrollTrigger&&!(function(){try{var a=JSON.parse(localStorage.getItem('calpus_auth')||'null');return a&&a.email&&Date.now()-(a.ts||0)<172800000;}catch(e){return false;}})()){
   gsap.registerPlugin(ScrollTrigger);
   var RM=matchMedia('(prefers-reduced-motion:reduce)').matches;
   var SMALL=innerWidth<700;
