@@ -1290,6 +1290,7 @@ function otpDone(){closeOverlay('otp-overlay');var cb=_otp.cb;_otp={email:'',cb:
 function resendOTP(){ if(_otp.email) sendOTP(_otp.email,_otp.cb); }
 function _afterAuth(email,name){
   try{ if(typeof PROFILE==='object'){PROFILE.email=email; if(name)PROFILE.name=name; localStorage.setItem('calpus_profile',JSON.stringify(PROFILE)); if(typeof applyProfileSidebar==='function')applyProfileSidebar();} }catch(e){}
+  saveAuth(email,name); // remember this login for 2 days
   try{ if(typeof MEMORY==='object'&&MEMORY&&name)MEMORY.name=name.split(' ')[0]; }catch(e){}
   closeOverlay('otp-overlay'); closeOverlay('auth-overlay');
   toast('Welcome'+(name?', '+name.split(' ')[0]:'')+' \u2726');
@@ -1339,7 +1340,7 @@ async function doLogin(){
   }catch(e){toast('Network error — try again.');}
 }
 function loginOTP(){ sendOTP((document.getElementById('li-email').value||'').trim(), openApp); }
-function openApp(){ if(!claimSession()){ showSessionBlock(sessionAlive()); return; } closeOverlay('auth-overlay');open('app-overlay');loadProfile();loadMemory();var _nm=document.getElementById('su-name');if(_nm&&_nm.value.trim())MEMORY.name=_nm.value.trim().split(' ')[0];renderStudentNotifs();renderGreeting();renderMemory();startSlides();placeTools(); }
+function openApp(){ if(!claimSession()){ showSessionBlock(sessionAlive()); return; } closeOverlay('auth-overlay');open('app-overlay');loadProfile();loadMemory();var _nm=document.getElementById('su-name');if(_nm&&_nm.value.trim())MEMORY.name=_nm.value.trim().split(' ')[0];renderStudentNotifs();renderGreeting();renderMemory();startSlides();placeTools();_trapBack(); }
 /* ---- mobile menu drawer + relocate advanced tools into it ---- */
 function toggleSide(){var s=document.querySelector('.app-side'),b=document.getElementById('side-backdrop');if(!s)return;var op=s.classList.toggle('open');if(b)b.classList.toggle('show',op);}
 function closeSide(){var s=document.querySelector('.app-side'),b=document.getElementById('side-backdrop');if(s)s.classList.remove('open');if(b)b.classList.remove('show');}
@@ -1354,7 +1355,7 @@ const MY_TAB = 't'+Date.now()+Math.floor(Math.random()*1e6);
 function sessionAlive(){ try{ const s=JSON.parse(localStorage.getItem('calpus_session')||'null'); return s && (Date.now()-s.ts<8000) ? s : null; }catch(e){ return null; } }
 function deviceLabel(){var ua=navigator.userAgent||'';var br=/Edg/.test(ua)?'Edge':/Chrome/.test(ua)?'Chrome':/Firefox/.test(ua)?'Firefox':/Safari/.test(ua)?'Safari':'Browser';var os=/Mac/.test(ua)?'macOS':/Windows/.test(ua)?'Windows':/Android/.test(ua)?'Android':(/iPhone|iPad/.test(ua)?'iOS':(/Linux/.test(ua)?'Linux':'device'));return br+' on '+os;}
 function claimSession(){ const s=sessionAlive(); if(s && s.tab!==MY_TAB) return false; localStorage.setItem('calpus_session',JSON.stringify({tab:MY_TAB,ts:Date.now(),dev:deviceLabel()})); return true; }
-function logout(){ const s=sessionAlive(); if(s && s.tab===MY_TAB) localStorage.removeItem('calpus_session'); closeOverlay('app-overlay'); toast('Logged out — this account is free to log in again.'); }
+function logout(){ const s=sessionAlive(); if(s && s.tab===MY_TAB) localStorage.removeItem('calpus_session'); clearAuth(); closeOverlay('app-overlay'); toast('Logged out — this account is free to log in again.'); }
 function showSessionBlock(s){var d=document.getElementById('sess-dev');if(d)d.textContent=(s&&s.dev)?s.dev:'Another device';var ago=s?Math.max(0,Math.round((Date.now()-s.ts)/1000)):0;var t=document.getElementById('sess-time');if(t)t.textContent='Active '+(ago<5?'just now':ago+'s ago');open('session-overlay');}
 function forceLogin(){ localStorage.setItem('calpus_session',JSON.stringify({tab:MY_TAB,ts:Date.now(),dev:deviceLabel()})); closeOverlay('session-overlay'); openApp(); }
 // heartbeat keeps this device's claim fresh while the app is open
@@ -1362,6 +1363,28 @@ setInterval(()=>{ if(document.getElementById('app-overlay').classList.contains('
 // if another tab on this device claims the session, close this one
 addEventListener('storage',e=>{ if(e.key==='calpus_session' && document.getElementById('app-overlay').classList.contains('open')){ const s=sessionAlive(); if(s && s.tab!==MY_TAB){ closeOverlay('app-overlay'); toast('Signed out — your account was opened on another tab/device.'); } } });
 addEventListener('beforeunload',()=>{ const s=sessionAlive(); if(s && s.tab===MY_TAB) localStorage.removeItem('calpus_session'); });
+
+/* ---- STAY LOGGED IN for 2 days + keep Back inside the app (never return to login/signup) ---- */
+var AUTH_TTL=2*24*60*60*1000; // 2 days
+function saveAuth(email,name){ try{ localStorage.setItem('calpus_auth',JSON.stringify({email:email||(typeof PROFILE==='object'&&PROFILE.email)||'',name:name||(typeof PROFILE==='object'&&PROFILE.name)||'',ts:Date.now()})); }catch(e){} }
+function authValid(){ try{ var a=JSON.parse(localStorage.getItem('calpus_auth')||'null'); return (a&&a.email&&(Date.now()-(a.ts||0)<AUTH_TTL))?a:null; }catch(e){ return null; } }
+function clearAuth(){ try{ localStorage.removeItem('calpus_auth'); }catch(e){} }
+// push a history entry so the browser Back button stays inside the app
+function _trapBack(){ try{ history.pushState({calpus:'app'},'',location.href); }catch(e){} }
+window.addEventListener('popstate',function(){
+  // Back closes an open panel (presentation/textbook/profile/pay) -> returns to the chat feed
+  var subs=['ppt-overlay','textbook-overlay','profile-overlay','pay-overlay'];
+  var openSub=subs.filter(function(id){var e=document.getElementById(id);return e&&e.classList.contains('open');});
+  if(openSub.length){ openSub.forEach(function(id){closeOverlay(id);}); _trapBack(); return; }
+  // Back closes the side menu if it is open
+  var side=document.querySelector('.app-side'); if(side&&side.classList.contains('open')){ closeSide(); _trapBack(); return; }
+  // While the chat feed is open, Back must NOT return to login/signup -> stay in the app
+  if(document.getElementById('app-overlay').classList.contains('open')){ _trapBack(); }
+});
+// Auto-enter the app on page load if still within the 2-day login window (skip login/signup)
+function _autoLogin(){ try{ if(authValid()){ loadProfile(); openApp(); } }catch(e){} }
+if(document.readyState==='loading') window.addEventListener('DOMContentLoaded',_autoLogin); else _autoLogin();
+
 function openAdmin(){ if(localStorage.getItem('calpus_admin')==='1'){ CURRENT_ROLE=localStorage.getItem('calpus_role')||'Owner'; openAdminPanel(); } else { open('adminlogin-overlay'); } }
 
 /* =========================================================
