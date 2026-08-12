@@ -2037,6 +2037,12 @@ function openTextbooks(){
     if(match) d.value=match;
     if(PROFILE.sem) document.getElementById('tb-sem').value=PROFILE.sem;
   }}catch(e){}
+  // If the chosen dept+sem has no books, jump to the first combo that DOES,
+  // so students see available textbooks instead of an empty "coming soon".
+  var _dd=document.getElementById('tb-dept'), _ss=document.getElementById('tb-sem');
+  if(!((TEXTBOOKS[_dd.value]||{})[_ss.value]||[]).length){
+    for(var dp in TEXTBOOKS){ for(var sm in TEXTBOOKS[dp]){ if((TEXTBOOKS[dp][sm]||[]).length){ _dd.value=dp; _ss.value=sm; break; } } if(((TEXTBOOKS[_dd.value]||{})[_ss.value]||[]).length) break; }
+  }
   renderTextbooks(); open('textbook-overlay');
 }
 function renderTextbooks(){
