@@ -314,8 +314,16 @@ svg.i{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stro
   .suggest::-webkit-scrollbar{display:none}
   .suggest button{font-size:.74rem;padding:.36rem .7rem;white-space:nowrap;flex:0 0 auto}
   .composer{padding:.7rem .8rem;gap:.45rem}
+  .composer textarea{min-height:46px;font-size:.9rem}
   .msg{max-width:88%}
   .chat{padding:1rem .9rem;gap:.8rem}
+  /* full-screen, STABLE app sheet — no floating gaps, no background peeking through */
+  #app-overlay{padding:0}
+  #app-overlay .modal.wide{max-width:100%;max-height:none;height:100vh;height:100dvh;border-radius:0}
+  #app-overlay .app-shell{height:100vh;height:100dvh}
+  /* keep the rotating banner text clear of the dots */
+  .cs-slide{padding-right:2.6rem}
+  .cs-slide b{font-size:.82rem}.cs-slide small{font-size:.7rem}
 }
 
 /* ===== PRESENTATION BUILDER ===== */
@@ -891,7 +899,7 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
         <div id="ac-box"></div>
         <div class="composer">
           <button class="mic" id="mic" onclick="toggleVoice()" title="Ask by voice" aria-label="Voice input"><svg class="i" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3"/></svg></button>
-          <textarea id="input" rows="1" placeholder="Ask Calpus any topic, or press the mic…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea>
+          <textarea id="input" rows="1" placeholder="Ask Calpus any topic…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"></textarea>
           <button class="send" onclick="sendMsg()" aria-label="Send"><svg class="i" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
         </div>
       </div>
@@ -1313,7 +1321,7 @@ async function doLogin(){
   }catch(e){toast('Network error — try again.');}
 }
 function loginOTP(){ sendOTP((document.getElementById('li-email').value||'').trim(), openApp); }
-function openApp(){ if(!claimSession()){ showSessionBlock(sessionAlive()); return; } closeOverlay('auth-overlay');open('app-overlay');loadMemory();var _nm=document.getElementById('su-name');if(_nm&&_nm.value.trim())MEMORY.name=_nm.value.trim().split(' ')[0];renderStudentNotifs();memoryGreeting();renderMemory();startSlides();loadProfile();placeTools(); }
+function openApp(){ if(!claimSession()){ showSessionBlock(sessionAlive()); return; } closeOverlay('auth-overlay');open('app-overlay');loadProfile();loadMemory();var _nm=document.getElementById('su-name');if(_nm&&_nm.value.trim())MEMORY.name=_nm.value.trim().split(' ')[0];renderStudentNotifs();memoryGreeting();renderMemory();startSlides();placeTools(); }
 /* ---- mobile menu drawer + relocate advanced tools into it ---- */
 function toggleSide(){var s=document.querySelector('.app-side'),b=document.getElementById('side-backdrop');if(!s)return;var op=s.classList.toggle('open');if(b)b.classList.toggle('show',op);}
 function closeSide(){var s=document.querySelector('.app-side'),b=document.getElementById('side-backdrop');if(s)s.classList.remove('open');if(b)b.classList.remove('show');}
@@ -1903,21 +1911,45 @@ function onFilesSelected(inp){
 }
 function delFile(i){DATA_FILES.splice(i,1);saveFiles();buildFilesList();}
 
-// ---- per-student memory (remembers name + what they studied, across sessions) ----
-let MEMORY={name:'',topics:[],count:0,last:0};
-function loadMemory(){try{var v=JSON.parse(localStorage.getItem('calpus_memory')||'null');if(v)MEMORY=Object.assign(MEMORY,v);}catch(e){}}
-function saveMemory(){MEMORY.last=Date.now();localStorage.setItem('calpus_memory',JSON.stringify(MEMORY));}
+// ---- per-student memory (each student's own name, searches & topics, across sessions & devices) ----
+let MEMORY={name:'',topics:[],searches:[],count:0,last:0};
+// Memory is keyed by the logged-in student's email, so every account keeps its OWN history.
+function memKey(){try{var e=(PROFILE&&PROFILE.email||'').trim().toLowerCase();return 'calpus_memory_'+(e||'guest');}catch(x){return 'calpus_memory_guest';}}
+function loadMemory(){
+  MEMORY={name:'',topics:[],searches:[],count:0,last:0};
+  try{var v=JSON.parse(localStorage.getItem(memKey())||'null');if(v)MEMORY=Object.assign(MEMORY,v);}catch(e){}
+  if(!Array.isArray(MEMORY.searches))MEMORY.searches=[];
+  if(!Array.isArray(MEMORY.topics))MEMORY.topics=[];
+  // best-effort: pull this student's memory from the cloud so it follows them across devices
+  try{ if(typeof cloudGet==='function'){ cloudGet(memKey()).then(function(cv){ if(cv&&(cv.last||0)>(MEMORY.last||0)){ MEMORY=Object.assign(MEMORY,cv); if(!Array.isArray(MEMORY.searches))MEMORY.searches=[]; if(!Array.isArray(MEMORY.topics))MEMORY.topics=[]; try{localStorage.setItem(memKey(),JSON.stringify(MEMORY));}catch(e){} renderMemory(); } }); } }catch(e){}
+}
+function saveMemory(){MEMORY.last=Date.now();try{localStorage.setItem(memKey(),JSON.stringify(MEMORY));}catch(e){} try{ if(typeof cloudSet==='function')cloudSet(memKey(),MEMORY); }catch(e){}}
 function topicOf(q){var t=q.replace(/explain|what is|tell me about|define|make a presentation on|presentation|slides?|generate|marks-wise|questions?|predict|exam|radar|\bthe\b|\babout\b/gi,'').replace(/\s+/g,' ').trim();return t?t.charAt(0).toUpperCase()+t.slice(1):'';}
-function rememberTopic(q){MEMORY.count++;if(/present|slide|ppt|predict|radar|exam|marks|question|q&a|hello|thank/i.test(q)){saveMemory();return;}var t=topicOf(q);
-  if(t&&t.length<=40&&!MEMORY.topics.some(function(x){return x.toLowerCase()===t.toLowerCase();})){MEMORY.topics.push(t);if(MEMORY.topics.length>12)MEMORY.topics.shift();}
-  saveMemory();renderMemory();}
+function rememberTopic(q){
+  q=(q||'').trim(); if(!q)return;
+  MEMORY.count++;
+  // keep EVERY search (deduping only an immediate repeat), newest last, capped at 50
+  var last=MEMORY.searches[MEMORY.searches.length-1];
+  if(!last||last.q.toLowerCase()!==q.toLowerCase()){ MEMORY.searches.push({q:q,t:Date.now()}); if(MEMORY.searches.length>50)MEMORY.searches.shift(); }
+  // also keep a short list of clean study TOPICS (skip command-style asks)
+  if(!/present|slide|ppt|predict|radar|exam|marks|question|q&a|hello|thank/i.test(q)){
+    var t=topicOf(q);
+    if(t&&t.length<=40&&!MEMORY.topics.some(function(x){return x.toLowerCase()===t.toLowerCase();})){MEMORY.topics.push(t);if(MEMORY.topics.length>12)MEMORY.topics.shift();}
+  }
+  saveMemory();renderMemory();
+}
 function renderMemory(){var el=document.getElementById('mem-box');if(!el)return;
-  if(!MEMORY.topics.length){el.innerHTML='';return;}
-  el.innerHTML='🧠 <b style="color:var(--teal-300)">Calpus remembers</b> you studied: '+MEMORY.topics.slice(-6).join(', ')+'. <span style="color:var(--destructive);cursor:pointer" onclick="clearMemory()">clear</span>';}
-function clearMemory(){MEMORY={name:MEMORY.name,topics:[],count:0,last:Date.now()};saveMemory();renderMemory();toast('Study memory cleared.');}
+  var recent=(MEMORY.searches||[]).slice(-6).map(function(s){return s.q;});
+  if(!recent.length&&!MEMORY.topics.length){el.innerHTML='';return;}
+  var list=recent.length?recent:MEMORY.topics.slice(-6);
+  var chips=list.map(function(s){var esc=String(s).replace(/[<>]/g,'');return '<span onclick="quickAsk(\''+esc.replace(/'/g,"\\'")+'\')" style="display:inline-block;background:rgba(45,212,191,.1);border:1px solid var(--glass-border);color:var(--teal-300);border-radius:999px;padding:.15rem .55rem;margin:.15rem .2rem 0 0;cursor:pointer;font-size:.72rem">'+esc+'</span>';}).join('');
+  el.innerHTML='🧠 <b style="color:var(--teal-300)">Your recent searches</b><br>'+chips+'<div style="margin-top:.3rem"><span style="color:var(--destructive);cursor:pointer;font-size:.72rem" onclick="clearMemory()">clear history</span></div>';}
+function clearMemory(){MEMORY={name:MEMORY.name,topics:[],searches:[],count:0,last:Date.now()};saveMemory();renderMemory();toast('Search history cleared.');}
 let _greeted=false;
 function memoryGreeting(){if(_greeted)return;_greeted=true;
-  if(MEMORY.topics.length){addMsg('Welcome back'+(MEMORY.name?', '+MEMORY.name:'')+'! Last time you studied <b>'+MEMORY.topics.slice(-3).join('</b>, <b>')+'</b>. Want to continue, or start a new topic?','bot');}}
+  var recent=(MEMORY.searches||[]).slice(-3).map(function(s){return s.q;});
+  if(recent.length){addMsg('Welcome back'+(MEMORY.name?', '+MEMORY.name:'')+'! Your recent searches: <b>'+recent.join('</b>, <b>')+'</b>. Want to continue, or start a new topic?','bot');}
+  else if(MEMORY.topics.length){addMsg('Welcome back'+(MEMORY.name?', '+MEMORY.name:'')+'! Last time you studied <b>'+MEMORY.topics.slice(-3).join('</b>, <b>')+'</b>.','bot');}}
 function buildFilesList(){
   var el=document.getElementById('files-list');if(!el)return;
   el.innerHTML='<div style="color:var(--fg-muted);margin-bottom:.4rem">Stored in database ('+DATA_FILES.length+'):</div>'+DATA_FILES.map(function(f,i){
