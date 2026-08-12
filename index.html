@@ -1243,8 +1243,15 @@ async function doSignup(){
   try{
     var r=await fetch(SB_URL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pass,data:{name:name}})});
     var d=await r.json().catch(function(){return{};});
-    if(!r.ok){toast(d.msg||d.error_description||d.error||'Could not create account.');return;}
+    if(!r.ok){
+      var m=(d.msg||d.error_description||d.error||'').toLowerCase();
+      if(m.indexOf('already registered')>=0||m.indexOf('already been registered')>=0){toast('That email is already registered — please log in.');return;}
+      if(m.indexOf('sending')>=0&&m.indexOf('email')>=0){toast('Signup is temporarily busy. Please try again in a minute.');return;}
+      toast(d.msg||d.error_description||d.error||'Could not create account.');return;
+    }
+    // Email-confirmation is OFF -> account is ready now, go straight in.
     if(d.access_token){ _afterAuth(email,name); return; }
+    // (Fallback) confirmation still ON -> one-time email code.
     _otp={email:email,cb:function(){_afterAuth(email,name);},type:'signup'};
     document.getElementById('otp-email').textContent=email;
     document.getElementById('otp-input').value='';
