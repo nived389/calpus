@@ -642,7 +642,7 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
         <select id="su-university"><option>University of Calicut</option><option>Kerala University (coming soon)</option><option>MG University (coming soon)</option><option>Kannur University (coming soon)</option><option>Other university (coming soon)</option></select></div>
       <div class="two-col">
         <div class="field"><label>Course</label>
-          <select>
+          <select id="su-course">
 <option>B.A English Language and Literature</option>
 <option>B.A Arabic Language and Literature</option>
 <option>B.A Functional Arabic</option>
@@ -744,8 +744,13 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
 <option>Bachelor of Computer Application</option>
 </select></div>
         <div class="field"><label>Semester</label>
-          <select><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div>
+          <select id="su-sem"><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div>
       </div>
+      <div class="field"><label>MDC subject <span style="color:var(--fg-muted);font-weight:400">(Multi-Disciplinary Course — for your MDC textbook)</span></label>
+        <input id="su-mdc" list="mdc-list" placeholder="e.g. Digital Marketing" />
+        <datalist id="mdc-list">
+          <option>Digital Marketing</option><option>Basics of Accounting</option><option>Financial Literacy</option><option>Entrepreneurship Development</option><option>Principles of Management</option><option>Business Environment</option><option>Personal Finance</option><option>Fundamentals of Economics</option><option>Communicative English</option><option>Basic Statistics</option>
+        </datalist></div>
       <div class="field"><label>Set a password</label><input id="su-pass" type="password" placeholder="Create a password (min 6 chars)" /></div>
       <button class="btn btn-primary" style="width:100%" onclick="doSignup()">Create account &amp; start free trial</button>
       <p class="switch-line">Already have an account? <b onclick="switchAuth('login')">Log in</b></p>
@@ -774,9 +779,9 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
   <div class="modal glass modal-pos" style="max-width:520px">
     <button class="x" onclick="closeOverlay('textbook-overlay')">×</button>
     <h2>📕 Textbook library</h2>
-    <p class="sub">Pick your department &amp; semester to download the Calpus textbook PDF (with watermark). More subjects are being uploaded.</p>
+    <p class="sub">Your textbooks for <b id="tb-course-label">your course</b> — download the Calpus watermarked PDF. Pick a semester below.</p>
     <div class="two-col">
-      <div class="field"><label>Department</label><select id="tb-dept" onchange="renderTextbooks()"></select></div>
+      <div class="field"><label>Your course <span style="color:var(--fg-muted);font-weight:400">(locked)</span></label><select id="tb-dept" disabled></select></div>
       <div class="field"><label>Semester</label><select id="tb-sem" onchange="renderTextbooks()"><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div>
     </div>
     <div id="tb-list" style="margin-top:.4rem"></div>
@@ -796,6 +801,7 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
     <div class="field"><label>University</label><select id="pf-university"><option>University of Calicut</option><option>Kerala University (coming soon)</option><option>MG University (coming soon)</option><option>Kannur University (coming soon)</option><option>Other university (coming soon)</option></select></div>
     <div class="two-col"><div class="field"><label>Course</label><input id="pf-course" type="text" /></div>
       <div class="field"><label>Semester</label><select id="pf-sem"><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option></select></div></div>
+    <div class="field"><label>MDC subject <span style="color:var(--fg-muted);font-weight:400">(for your MDC textbook)</span></label><input id="pf-mdc" list="mdc-list" type="text" placeholder="e.g. Digital Marketing" /></div>
     <button class="btn btn-primary" style="width:100%" onclick="saveProfile()">Save changes</button>
   </div>
 </div>
@@ -1267,8 +1273,12 @@ async function doSignup(){
   var email=(document.getElementById('su-email').value||'').trim();
   var pass=(document.getElementById('su-pass').value||'');
   var name=(document.getElementById('su-name').value||'').trim();
+  var gv=function(id){var e=document.getElementById(id);return e?(e.value||'').trim():'';};
+  var course=gv('su-course'), sem=gv('su-sem'), mdc=gv('su-mdc'), uni=gv('su-university');
   if(!email||email.indexOf('@')<0){toast('Enter a valid email.');return;}
   if(!pass||pass.length<6){toast('Password must be at least 6 characters.');return;}
+  // capture the student's course so we allot ONLY their textbooks (+ their MDC book)
+  try{ if(typeof PROFILE==='object'){ if(course)PROFILE.course=course; if(sem)PROFILE.sem=sem; PROFILE.mdc=mdc; if(uni)PROFILE.university=uni; if(name)PROFILE.name=name; } }catch(e){}
   toast('Creating your account…');
   try{
     var r=await fetch(SB_URL+'/auth/v1/signup',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pass,data:{name:name}})});
@@ -2055,7 +2065,7 @@ function toggleDemo(){demoPlaying=!demoPlaying;var p=document.getElementById('vf
 })();
 
 // ---- profile: view & edit after login ----
-var PROFILE={name:'Aarav Krishnan',phone:'+91 98470 11223',email:'aarav@gmail.com',university:'University of Calicut',course:'BBA',sem:'Sem 3'};
+var PROFILE={name:'Aarav Krishnan',phone:'+91 98470 11223',email:'aarav@gmail.com',university:'University of Calicut',course:'BBA',sem:'Sem 3',mdc:''};
 function loadProfile(){try{var v=JSON.parse(localStorage.getItem('calpus_profile')||'null');if(v)PROFILE=Object.assign(PROFILE,v);}catch(e){}applyProfileSidebar();}
 function applyProfileSidebar(){var n=document.getElementById('side-name');if(n)n.textContent=PROFILE.name;var sub=document.getElementById('side-sub');if(sub)sub.textContent=PROFILE.course+' · '+PROFILE.sem+' · Trial';var av=document.getElementById('side-av');if(av)av.textContent=(PROFILE.name||'S').charAt(0).toUpperCase();}
 var TEXTBOOKS={
@@ -2063,41 +2073,63 @@ var TEXTBOOKS={
   'BBA':{'Sem 3':[{s:'Domestic Logistics Management',f:'textbooks/domestic-logistics-management.pdf'},{s:'Human Resource Management',f:'textbooks/human-resource-management.pdf'},{s:'Strategic Cost Analysis',f:'textbooks/strategic-cost-analysis.pdf'},{s:'Business and Corporate Regulations',f:'textbooks/business-corporate-regulations.pdf'},{s:'Skills for Employability',f:'textbooks/skills-for-employability.pdf'}]}
 };
 var TB_DEPTS=['B.Com','BBA','BSc Computer Science','BA English','BSc Physics','BSc Mathematics','BCA','BA Economics','BBA LLB'];
+// Map a student's course name to the textbook department key it belongs to.
+function courseToDept(course){
+  var c=(course||'').toLowerCase();
+  if(c.indexOf('business administration')>=0||/\bbba\b/.test(c)) return 'BBA';
+  if(c.indexOf('commerce')>=0||c.indexOf('b.com')>=0||c.indexOf('b com')>=0||/\bbcom\b/.test(c)) return 'B.Com';
+  var keys=Object.keys(TEXTBOOKS).filter(function(k){return k!=='MDC';});
+  for(var i=0;i<keys.length;i++){ if(c.indexOf(keys[i].toLowerCase())>=0) return keys[i]; }
+  return null;
+}
+function studentDept(){ try{ return courseToDept(PROFILE.course); }catch(e){ return null; } }
 function openTextbooks(){
-  var d=document.getElementById('tb-dept');
-  if(!d.options.length) d.innerHTML=TB_DEPTS.map(function(x){return '<option>'+x+'</option>';}).join('');
-  // default to the student's profile if we have it
-  try{ if(typeof PROFILE==='object'){
-    var c=(PROFILE.course||'').toLowerCase();
-    var match=TB_DEPTS.find(function(x){return c.indexOf(x.toLowerCase())>=0;})||(c.indexOf('com')>=0?'B.Com':(c.indexOf('bba')>=0?'BBA':null));
-    if(match) d.value=match;
-    if(PROFILE.sem) document.getElementById('tb-sem').value=PROFILE.sem;
-  }}catch(e){}
-  // If the chosen dept+sem has no books, jump to the first combo that DOES,
-  // so students see available textbooks instead of an empty "coming soon".
-  var _dd=document.getElementById('tb-dept'), _ss=document.getElementById('tb-sem');
-  if(!((TEXTBOOKS[_dd.value]||{})[_ss.value]||[]).length){
-    for(var dp in TEXTBOOKS){ for(var sm in TEXTBOOKS[dp]){ if((TEXTBOOKS[dp][sm]||[]).length){ _dd.value=dp; _ss.value=sm; break; } } if(((TEXTBOOKS[_dd.value]||{})[_ss.value]||[]).length) break; }
+  var dept=studentDept();
+  var d=document.getElementById('tb-dept'), ss=document.getElementById('tb-sem');
+  // Course is LOCKED to the student's own course — a BBA student only sees BBA books, B.Com only B.Com.
+  var shown=dept||(PROFILE.course||'Your course');
+  d.innerHTML='<option>'+shown+'</option>'; d.value=shown; d.disabled=true;
+  var lbl=document.getElementById('tb-course-label'); if(lbl) lbl.textContent=PROFILE.course||shown;
+  // default to the student's semester; if it has none of THEIR books, pick their first populated semester
+  if(PROFILE.sem) ss.value=PROFILE.sem;
+  if(dept && !((TEXTBOOKS[dept]||{})[ss.value]||[]).length){
+    for(var sm in TEXTBOOKS[dept]){ if((TEXTBOOKS[dept][sm]||[]).length){ ss.value=sm; break; } }
   }
   renderTextbooks(); open('textbook-overlay');
 }
 function renderTextbooks(){
-  var dept=document.getElementById('tb-dept').value, sem=document.getElementById('tb-sem').value;
-  var list=(TEXTBOOKS[dept]&&TEXTBOOKS[dept][sem])||[];
-  var el=document.getElementById('tb-list');
-  if(!list.length){el.innerHTML='<div class="tb-empty">📚 Textbooks for <b>'+dept+' · '+sem+'</b> are being uploaded soon.</div>';return;}
-  el.innerHTML=list.map(function(t){return '<div class="tb-row"><div><b>'+t.s+'</b><br><small>'+dept+' · '+sem+' · Calpus watermark</small></div><a class="btn btn-primary btn-sm" href="'+t.f+'" download>⭳ Download</a></div>';}).join('')
-    +'<div class="tb-empty" style="margin-top:.5rem">More subjects for this semester coming soon.</div>';
+  var dept=studentDept(), sem=document.getElementById('tb-sem').value, courseName=PROFILE.course||dept||'your course';
+  var list=(dept&&TEXTBOOKS[dept]&&TEXTBOOKS[dept][sem])||[];
+  var html='';
+  if(!list.length){
+    html+='<div class="tb-empty">📚 Your '+courseName+' textbooks for <b>'+sem+'</b> are being uploaded soon.</div>';
+  }else{
+    html+=list.map(function(t){return '<div class="tb-row"><div><b>'+t.s+'</b><br><small>'+courseName+' · '+sem+' · Calpus watermark</small></div><a class="btn btn-primary btn-sm" href="'+t.f+'" download>⭳ Download</a></div>';}).join('');
+  }
+  // The student's MDC (Multi-Disciplinary Course) textbook, matched to what they picked at signup
+  var mdc=(PROFILE.mdc||'').trim(), mdcBooks=TEXTBOOKS.MDC||{};
+  if(mdc){
+    var key=Object.keys(mdcBooks).find(function(k){return k.toLowerCase()===mdc.toLowerCase();});
+    if(key){ var b=mdcBooks[key];
+      html+='<div class="tb-row"><div><b>'+b.s+'</b><br><small>MDC · '+key+' · Calpus watermark</small></div><a class="btn btn-primary btn-sm" href="'+b.f+'" download>⭳ Download</a></div>';
+    }else{
+      html+='<div class="tb-empty" style="margin-top:.5rem">Your MDC — <b>'+mdc+'</b> — textbook is being uploaded soon.</div>';
+    }
+  }
+  html+='<div class="tb-empty" style="margin-top:.5rem">More subjects for your course are being added.</div>';
+  document.getElementById('tb-list').innerHTML=html;
 }
 function openProfile(){loadProfile();
   document.getElementById('pf-name').value=PROFILE.name;document.getElementById('pf-phone').value=PROFILE.phone;document.getElementById('pf-email').value=PROFILE.email;
   document.getElementById('pf-university').value=PROFILE.university;document.getElementById('pf-course').value=PROFILE.course;document.getElementById('pf-sem').value=PROFILE.sem;
+  var pm=document.getElementById('pf-mdc');if(pm)pm.value=PROFILE.mdc||'';
   open('profile-overlay');}
 function saveProfile(){
   PROFILE.email=document.getElementById('pf-email').value.trim();
   PROFILE.university=document.getElementById('pf-university').value;
   PROFILE.course=document.getElementById('pf-course').value.trim()||PROFILE.course;
   PROFILE.sem=document.getElementById('pf-sem').value;
+  var pm=document.getElementById('pf-mdc');if(pm)PROFILE.mdc=pm.value.trim();
   localStorage.setItem('calpus_profile',JSON.stringify(PROFILE));
   applyProfileSidebar();
   if(typeof MEMORY==='object'&&MEMORY)MEMORY.name=PROFILE.name.split(' ')[0];
