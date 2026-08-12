@@ -1939,9 +1939,11 @@ function rememberTopic(q){
   saveMemory();renderMemory();
 }
 function renderMemory(){var el=document.getElementById('mem-box');if(!el)return;
-  var recent=(MEMORY.searches||[]).slice(-6).map(function(s){return s.q;});
+  // newest-first, de-duplicated for a clean list (full history is still stored)
+  var seen={},recent=[];
+  for(var i=(MEMORY.searches||[]).length-1;i>=0&&recent.length<6;i--){var q=MEMORY.searches[i].q,k=q.toLowerCase();if(!seen[k]){seen[k]=1;recent.push(q);}}
   if(!recent.length&&!MEMORY.topics.length){el.innerHTML='';return;}
-  var list=recent.length?recent:MEMORY.topics.slice(-6);
+  var list=recent.length?recent:MEMORY.topics.slice(-6).reverse();
   var chips=list.map(function(s){var esc=String(s).replace(/[<>]/g,'');return '<span onclick="quickAsk(\''+esc.replace(/'/g,"\\'")+'\')" style="display:inline-block;background:rgba(45,212,191,.1);border:1px solid var(--glass-border);color:var(--teal-300);border-radius:999px;padding:.15rem .55rem;margin:.15rem .2rem 0 0;cursor:pointer;font-size:.72rem">'+esc+'</span>';}).join('');
   el.innerHTML='🧠 <b style="color:var(--teal-300)">Your recent searches</b><br>'+chips+'<div style="margin-top:.3rem"><span style="color:var(--destructive);cursor:pointer;font-size:.72rem" onclick="clearMemory()">clear history</span></div>';}
 function clearMemory(){MEMORY={name:MEMORY.name,topics:[],searches:[],count:0,last:Date.now()};saveMemory();renderMemory();toast('Search history cleared.');}
