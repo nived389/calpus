@@ -886,7 +886,7 @@ footer{border-top:1px solid var(--glass-border);padding:3rem clamp(1rem,5vw,2rem
         <button class="side-btn" style="margin-top:.4rem" onclick="logout()">🔒 Log out (free this device)</button>
         <div id="side-tools-lbl">Preferences</div>
         <div id="side-tools" class="side-tools"></div>
-        <div class="side-foot">Grounded on: <b style="color:var(--teal-300)">Domestic Logistics Management notes, 2025 paper &amp; syllabus</b> · indexed · one login per device</div>
+        <div class="side-foot">Grounded on: <b style="color:var(--teal-300)">all your uploaded subject textbooks &amp; question banks</b> — Logistics, HRM, Strategic Cost Analysis, Business &amp; Corporate Regulations, Skills for Employability, Travel Formalities · one login per device</div>
       </aside>
       <div class="side-backdrop" id="side-backdrop" onclick="closeSide()"></div>
       <div class="app-main">
@@ -1443,7 +1443,7 @@ function renderGreeting(){
 // In-syllabus scope = the 16 official units of BBA3CJ202 (stored in Calpus DB).
 const SYLLABUS=['logistic','supply chain','inbound','outbound','in-plant','customer service','order processing','system design','integrated','transport','road','rail','air','waterway','pipeline','economics','cost','freight','carrier','multimodal','intermodal','fleet','distribution','hub','warehous','material handling','asrs','storage','retrieval','packaging','unitization','palletization','container','inventory','safety stock','eoq','reorder','tms','wms','rfid','gps','3pl','4pl','third-party','fourth-party','reverse logistics','green logistics','vehicle','routing','scheduling','way bill','reefer','driver','kilometer','standing cost','running cost','overhead','way bill','body type'];
 const ALLOW=['present','slide','ppt','exam','radar','predict','marks','question','q&a','hi ','hello','hey','thank','help'];
-function inSyllabus(q){const x=q.toLowerCase();if(typeof sfeIsSFE==='function'&&sfeIsSFE(q))return true;if(ALLOW.some(k=>x.includes(k)))return true;return SYLLABUS.some(k=>x.includes(k));}
+function inSyllabus(q){const x=q.toLowerCase();if((typeof sfeIsSFE==='function'&&sfeIsSFE(q))||(typeof anySubjectKey==='function'&&anySubjectKey(q)))return true;if(ALLOW.some(k=>x.includes(k)))return true;return SYLLABUS.some(k=>x.includes(k));}
 function typingBubble(){const t=document.createElement('div');t.className='msg bot';t.innerHTML='<div style="display:flex;align-items:center;gap:.6rem"><div class="calpus mini think"><div class="core"><div class="cap"><div class="board"></div></div><div class="face"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth"></div></div></div></div><div class="typing"><span></span><span></span><span></span></div></div>';chat.appendChild(t);chat.scrollTop=chat.scrollHeight;speak();return t;}
 var AI_ENGINE='', WEB_MODE=false;
 function guessPPT(q){var e=(typeof findEntry==='function')?findEntry(q):null;return e?e.ppt:null;}
@@ -1479,7 +1479,7 @@ async function botReply(q){
 }
 function notInSyllabus(q){
   speak();
-  const d=addMsg("<b>\u26A0\uFE0F That topic isn't in your syllabus</b> (Domestic Logistics Management, BBA3CJ202).\n\nWant me to answer it anyway?",'bot');
+  const d=addMsg("<b>\u26A0\uFE0F That topic isn't in your uploaded subjects</b> (Logistics, HRM, Strategic Cost Analysis, Business & Corporate Regulations, Skills for Employability, Travel Formalities).\n\nWant me to answer it anyway?",'bot');
   const r=document.createElement('div');r.className='row-act';
   r.innerHTML=`<button class="btn btn-accent btn-sm" onclick="answerAnyway('${encodeURIComponent(q)}')">Yes, answer anyway</button>`;
   d.appendChild(r);
@@ -1653,10 +1653,75 @@ function sfeGenerate(q){
   return {text:'That\'s from your Skills for Employability question bank.\n\n'+sfeImportant(s),src:'Calpus KB — '+SFE_SUBJECT};
 }
 
+/* ===== ALL uploaded subjects (BBA/B.Com Sem 3) — so the bot answers EVERY subject, not just Logistics =====
+   Grounded on the uploaded textbooks: HRM, Strategic Cost Analysis, Business & Corporate Regulations,
+   Travel Formalities & Documentation (+ Logistics and Skills for Employability handled separately). */
+function _tc(s){return (s||'').replace(/\b\w/g,function(c){return c.toUpperCase();});}
+var SUBJECTS=[
+ {name:'Human Resource Management',keys:['human resource','hrm','hr planning','human resource planning','recruitment','recruit','staffing','training and development','training & development','performance appraisal','job analysis','job description','job specification','manpower','induction','employee motivation','training'],
+  kb:{
+   'human resource management':{t:'Human Resource Management',def:'HRM is the process of planning, acquiring, developing, motivating and retaining people so an organization achieves its goals.',points:['Functions: HR planning, recruitment, selection, training, appraisal and compensation','It is both a staff function and a line responsibility of every manager','Aims to put the right people in the right jobs','Balances organizational goals with employee welfare'],app:'Example: setting up recruitment and training to staff a new department.'},
+   'human resource planning':{t:'Human Resource Planning',def:'HR Planning (HRP) forecasts an organization\'s future human-resource needs and ensures the right number and kind of people are available at the right time.',points:['Forecasts the demand for and supply of manpower','Identifies gaps — surplus or shortage','Feeds recruitment, training and succession plans','Links HR to the overall business strategy'],app:'Example: planning to hire and train staff before a new branch opens.'},
+   'recruitment':{t:'Recruitment & Selection',def:'Recruitment finds and attracts a pool of suitable candidates; selection then screens and chooses the best fit.',points:['Sources: internal (promotion, transfer) and external (ads, portals, campus, agencies)','Recruitment attracts; selection tests, interviews and chooses','Good recruitment lowers hiring cost and improves job-fit','Followed by placement and induction'],app:'Example: a campus drive to recruit management trainees.'},
+   'training':{t:'Training & Development',def:'Training & Development improves employees\' knowledge, skills and attitudes for present and future roles.',points:['Training = current-job skills; Development = future growth','Methods: on-the-job (coaching, rotation) and off-the-job (lectures, e-learning)','Raises productivity, morale and retention','Steps: identify needs, design, deliver, evaluate'],app:'Example: an on-the-job coaching program for new sales staff.'},
+   'performance appraisal':{t:'Performance Appraisal',def:'Performance appraisal is the systematic evaluation of an employee\'s performance against set standards.',points:['Methods: rating scales, MBO, 360-degree feedback','Uses: promotion, pay, training needs and feedback','Should be fair, objective and regular','Feeds development and reward decisions'],app:'Example: an annual 360-degree review to plan promotions.'},
+   'job analysis':{t:'Job Analysis',def:'Job analysis studies a job to produce a job description (its duties) and a job specification (the qualities needed to do it).',points:['Job description: tasks, duties and responsibilities','Job specification: skills, qualifications and traits required','Basis for recruitment, training and appraisal','Clarifies expectations and pay grading'],app:'Example: writing a job description before advertising a vacancy.'}
+  }},
+ {name:'Strategic Cost Analysis',keys:['cost sheet','prime cost','works cost','factory cost','cost of goods','cogs','cost of sales','marginal cost','marginal costing','break-even','break even','bep','contribution','p/v ratio','pv ratio','margin of safety','cost classification','elements of cost','absorption costing','standard costing','cost accounting','material cost control','labour cost','overhead absorption'],
+  kb:{
+   'cost sheet':{t:'Cost Sheet',def:'A cost sheet is a statement showing the total and per-unit cost of production, built up in stages.',points:['Prime cost = direct material + direct labour + direct expenses','Works/Factory cost = prime cost + factory overheads','Cost of production = works cost + administration overheads','Cost of sales = cost of production + selling & distribution overheads; + profit = sales'],app:'Example: preparing a cost sheet to quote a selling price.'},
+   'marginal costing':{t:'Marginal Costing',def:'Marginal costing charges only variable costs to products and treats fixed cost as a period cost, to aid decision-making.',points:['Contribution = Sales − Variable cost','Fixed cost is written off against contribution','Used for pricing, make-or-buy and product-mix decisions','Separates fixed and variable cost behaviour'],app:'Example: deciding whether to accept a special order below normal price.'},
+   'break-even':{t:'Break-Even Analysis',def:'The break-even point (BEP) is the output level where total revenue equals total cost — no profit, no loss.',points:['BEP (units) = Fixed cost ÷ Contribution per unit','BEP (₹) = Fixed cost ÷ P/V ratio','P/V ratio = Contribution ÷ Sales × 100','Margin of safety = actual sales − break-even sales'],app:'Example: finding how many units must be sold to cover fixed costs.'},
+   'contribution':{t:'Contribution',def:'Contribution is Sales minus Variable cost; it first covers fixed cost and then becomes profit.',points:['Contribution = Sales − Variable cost = Fixed cost + Profit','Per unit = selling price − variable cost per unit','Higher contribution reaches break-even faster','Basis of the P/V ratio and BEP'],app:'Example: using contribution per unit to pick the most profitable product.'},
+   'elements of cost':{t:'Elements of Cost',def:'Cost is the resources spent to make a product or service, classified into material, labour and expenses (direct and indirect).',points:['Direct material + direct labour + direct expenses = prime cost','Indirect costs = overheads (factory, admin, selling)','By behaviour: fixed, variable and semi-variable','Basis for pricing, control and decisions'],app:'Example: separating factory rent (fixed) from raw material (variable).'},
+   'labour cost':{t:'Labour Cost',def:'Labour cost is the wages and benefits paid to workers; control aims at more output per rupee.',points:['Direct labour (traceable) vs indirect labour','Time-rate and piece-rate wage systems','Control of idle time, overtime and labour turnover','Incentive schemes raise output'],app:'Example: a piece-rate incentive to boost worker output.'}
+  }},
+ {name:'Business and Corporate Regulations',keys:['contract act','indian contract','sale of goods','companies act','consideration','conditions and warranties','condition and warranty','caveat emptor','breach of contract','free consent','valid contract','void contract','voidable','company law','incorporation of company','unpaid seller','offer and acceptance','essentials of a contract','essentials of contract'],
+  kb:{
+   'indian contract':{t:'Indian Contract Act 1872',def:'The Indian Contract Act 1872 governs agreements enforceable by law — a contract = an agreement + enforceability.',points:['Essentials: offer & acceptance, lawful consideration, capacity, free consent, lawful object','Types: valid, void, voidable and unenforceable','Free consent = not caused by coercion, undue influence, fraud, misrepresentation or mistake','Breach of contract gives remedies such as damages'],app:'Example: a signed sale agreement enforceable in court.'},
+   'consideration':{t:'Consideration',def:'Consideration is "something in return" — the price for which a promise is bought (Sec. 2(d)).',points:['May be past, present or future','Must be lawful and real','"No consideration, no contract" (with exceptions)','Need not be adequate but must have value'],app:'Example: paying money in return for goods.'},
+   'sale of goods':{t:'Sale of Goods Act 1930',def:'The Sale of Goods Act 1930 governs contracts where a seller transfers ownership of goods to a buyer for a price.',points:['Sale (ownership passes now) vs Agreement to sell (later)','Conditions (essential terms) vs Warranties (minor terms)','Caveat emptor — let the buyer beware','Rights of an unpaid seller: lien, stoppage in transit, resale'],app:'Example: goods of wrong description breach a condition, letting the buyer reject them.'},
+   'conditions and warranties':{t:'Conditions & Warranties',def:'A condition is a term essential to the contract; a warranty is a minor term collateral to it.',points:['Breach of condition → repudiate the contract','Breach of warranty → only claim damages','A condition may sometimes be treated as a warranty','Implied conditions: title, description, quality, fitness'],app:'Example: a wrong-description good breaches a condition.'},
+   'companies act':{t:'Companies Act',def:'The Companies Act governs the formation, management and winding-up of companies. A company is a separate legal person.',points:['Features: separate legal entity, limited liability, perpetual succession, common seal','Types: private, public, one-person, government companies','Formation: promotion, incorporation, capital subscription, commencement','Managed by a Board of Directors'],app:'Example: a private limited company with limited liability for its shareholders.'}
+  }},
+ {name:'Travel Formalities & Documentation',keys:['travel document','passport','visa','timatic','airport facilitation','passenger flow','customs','duty-free','duty free','general free allowance','gfa','prohibited goods','restricted goods','foreign exchange','immigration','emigration','travel insurance','green channel','red channel','baggage rule'],
+  kb:{
+   'travel document':{t:'Travel Documentation',def:'Travel documentation is the set of documents a passenger needs to travel internationally — passport, visa, tickets and health documents.',points:['Passport: proof of identity and nationality','Visa: permission to enter a foreign country','Supporting: tickets, insurance, health certificates','Documents must match the trip\'s purpose and rules'],app:'Example: checking passport validity and visa before an international trip.'},
+   'timatic':{t:'TIMATIC',def:'TIMATIC (Travel Information Manual Automatic) is IATA\'s database of current passport, visa, health and customs requirements that airlines use to check passengers.',points:['Gives entry requirements by nationality and destination','Used at check-in to avoid denied boarding','Covers passport, visa, health and customs rules','Kept up to date by IATA'],app:'Example: an airline agent checking TIMATIC before issuing a boarding pass.'},
+   'visa':{t:'Visa & Visa Facilitation',def:'A visa is an official endorsement permitting a foreigner to enter, stay in or leave a country for a stated purpose and period.',points:['Types: tourist, business, student, transit, work','Issued by the destination country\'s embassy/consulate','Visa facilitation eases and speeds the process','Requirements vary by nationality'],app:'Example: applying for a tourist visa before travelling abroad.'},
+   'airport facilitation':{t:'Airport Facilitation & Passenger Flow',def:'Airport facilitation is the smooth, efficient handling of passengers through airport formalities — check-in, security, immigration and customs.',points:['Passenger flow: check-in → security → immigration → boarding','Balances speed with security and legal control','Involves airlines, airport and government agencies','Reduces delays and improves the experience'],app:'Example: streamlined immigration counters to speed passenger flow.'},
+   'customs':{t:'Air Customs & Duty-Free Allowance',def:'Air customs regulations control the goods passengers may bring in or take out and the duty payable; the duty-free allowance (GFA) is what is exempt.',points:['Green channel (nothing to declare) vs Red channel (goods to declare)','Duty-free / General Free Allowance sets the exempt limit','Excess is charged duty at the applicable rate','Prohibited and restricted goods are controlled'],app:'Example: using the red channel to declare goods above the duty-free limit.'},
+   'immigration':{t:'Immigration & Emigration',def:'Immigration and emigration procedures control the legal entry (immigration) and exit (emigration) of travellers at borders.',points:['Passport and visa checked at immigration counters','Arrival/departure cards and passport stamping','Emigration clearance for certain passport holders','Ensures lawful cross-border movement'],app:'Example: passport stamping at the immigration counter on arrival.'}
+  }}
+];
+function subjMarks(name,e,subjName){
+  var pts=e.points||[]; var app=e.app||('Example: a relevant application of '+name+'.');
+  var five='   • '+pts.slice(0,3).join('\n   • ');
+  var conn=['First, ','Second, ','Third, ','Finally, ','Also, '];
+  var body=pts.map(function(p,i){return (conn[i]||'Also, ')+p+'.';}).join(' ');
+  var essay='   Introduction: '+e.def+'\n\n   Body: '+body+'\n\n   '+app+'\n\n   Conclusion: '+name+' is an important part of '+subjName+' — understanding it lets you answer 2, 5 and 10-mark questions confidently.';
+  return '\n\n📌 '+name+' — model answers sized to the marks:'
+    +'\n\n▸ 2 marks — Define '+name+'.\n   Ans: '+e.def
+    +'\n\n▸ 5 marks — Explain '+name+' with its key points.\n   Ans: '+e.def+'\n'+five
+    +'\n\n▸ 10 marks (essay) — '+name+' in detail, with an example.\n   Ans:\n'+essay;
+}
+function subjectDetect(s){for(var i=0;i<SUBJECTS.length;i++){if(SUBJECTS[i].keys.some(function(k){return s.indexOf(k)>=0;}))return SUBJECTS[i];}return null;}
+function anySubjectKey(q){return !!subjectDetect((q||'').toLowerCase());}
+function subjectAnswer(q){
+  var s=q.toLowerCase(); var sub=subjectDetect(s); if(!sub) return null;
+  var bestKey=null,bestLen=0;
+  for(var key in sub.kb){ if(s.indexOf(key)>=0 && key.length>bestLen){bestKey=key;bestLen=key.length;} }
+  var name,e;
+  if(bestKey){ e=sub.kb[bestKey]; name=e.t||_tc(bestKey); }
+  else { name=_tc(topicOf(q)||sub.name); e={def:'The core idea of '+name+', grounded on your '+sub.name+' textbook.',points:['Its meaning or definition','Its main components or how it works','Why it matters in '+sub.name],app:'Example: a relevant application from your '+sub.name+' notes.'}; }
+  return {text:e.def+subjMarks(name,e,sub.name),src:'Calpus KB — '+sub.name+' (your textbook)',ppt:name};
+}
+
 // BACKEND: replace with fetch('/api/ask') → RAG over your uploaded vector DB + LLM. Returns {text, src, ppt}.
 function generateAnswer(q){
   const s=q.toLowerCase();
   var _sfe=sfeGenerate(q); if(_sfe) return _sfe;   // Skills for Employability question bank
+  var _sub=subjectAnswer(q); if(_sub) return _sub; // HRM / Cost / Regulations / Travel textbooks
   if(s.includes('predict')||s.includes('radar')||s.includes('next exam')||(s.includes('exam')&&s.includes('question')&&!s.includes('marks')))
     return {text:"Exam Radar — Domestic Logistics Management (from the 2025 paper & syllabus pattern):\n\n\u25B8 Vehicle selection & body types \u2014 90% likely\n\u25B8 Standing / running / overhead costs \u2014 82%\n\u25B8 Fleet management \u2014 78%\n\u25B8 Vehicle routing & scheduling \u2014 72%\n\u25B8 Driver licensing & Driver's Hours \u2014 68%\n\nPattern: Section C (10 marks) almost always asks either vehicle selection or driver regulations, and costs appear every year in Section B. Start with fleet costs and vehicle types.",src:"Calpus KB \u2014 2025 answer key + syllabus"};
   if(s.includes('marks')||s.includes('q&a')||s.includes('questions'))
@@ -2188,7 +2253,8 @@ const ta=document.getElementById('input');ta&&ta.addEventListener('input',()=>{t
 // ---- live typing suggestions (keywords & questions from the database) ----
 var SUGG=['Explain Logistics Management','Explain Warehousing','Explain Fleet Management','Explain Modes of Transportation','Explain Inventory Management (EOQ)','Explain 3PL and 4PL','Define Way Bill','Define GPS in logistics','Types of vehicle body','Standing, running and overhead costs','Vehicle routing and scheduling','Drivers Hours regulations','Vehicle acquisition','Reefer refrigerated body','Warehouse types: public, private, bonded','Hub-and-spoke distribution','Reverse logistics and green logistics','Safety stock and reorder point','Multimodal and intermodal transport','Order processing cycle','Make a presentation on Warehousing','Predict my next exam questions','Marks-wise questions on Fleet Management',
 'What is resilience in a career context?','Ten ways to build resilience during a prolonged job hunt','What is a disrupted workplace?','What is the elimination game in hiring?','Employability skills beyond technical skills','How has the traditional career path evolved?','How does goal setting improve job search outcomes?','Important questions in Skills for Employability',
-'Explain the Parachute Method','Describe the Flower Exercise process and benefits','What is the Two-Step Career Change strategy?','Define career planning','What is the hidden job market?','What are informational interviews?','Career clarity is built not found','Design a career shift plan from teaching to UX design'];
+'Explain the Parachute Method','Describe the Flower Exercise process and benefits','What is the Two-Step Career Change strategy?','Define career planning','What is the hidden job market?','What are informational interviews?','Career clarity is built not found','Design a career shift plan from teaching to UX design',
+'Explain Human Resource Management','What is Human Resource Planning?','Explain Recruitment and Selection','Explain Training and Development','What is a cost sheet?','Explain Marginal Costing','Explain Break-even analysis','What is contribution?','Explain the Indian Contract Act 1872','Explain the Sale of Goods Act 1930','Conditions and warranties','Explain the Companies Act','What is TIMATIC?','Explain airport facilitation and passenger flow','Duty-free allowance and customs','Immigration and emigration procedures'];
 function acRender(list){var b=document.getElementById('ac-box');if(!b)return;
   if(!list.length){b.classList.remove('show');b.innerHTML='';return;}
   b.innerHTML=list.map(function(t){return '<div class="ac-item" data-t="'+t+'" onmousedown="acPick(event,this)"><span class="k">↳</span>'+t+'</div>';}).join('');
